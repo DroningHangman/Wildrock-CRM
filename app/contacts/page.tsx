@@ -38,11 +38,22 @@ export default function ContactsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  
+  // Edit state
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [editNotes, setEditNotes] = useState("");
   const [editTags, setEditTags] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [newTagInput, setNewTagInput] = useState("");
+
+  // Add state
+  const [isAdding, setIsAdding] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+  const [newOrg, setNewOrg] = useState("");
+  const [newContactTypes, setNewContactTypes] = useState<string[]>([]);
+  const [newContactTypeInput, setNewContactTypeInput] = useState("");
 
   async function fetchContacts() {
     setLoading(true);
@@ -103,6 +114,36 @@ export default function ContactsPage() {
     fetchContacts();
   }
 
+  async function addContact() {
+    if (!newName.trim()) {
+      alert("Name is required");
+      return;
+    }
+    setSaving(true);
+    const { error } = await supabase.from("contacts").insert({
+      name: newName,
+      email: newEmail || null,
+      phone: newPhone || null,
+      organization: newOrg || null,
+      contact_types: newContactTypes.length ? newContactTypes : null,
+      tags: [],
+      notes: ""
+    });
+    setSaving(false);
+    if (error) {
+      console.error("Error adding contact:", error);
+      alert("Failed to add contact");
+      return;
+    }
+    setIsAdding(false);
+    setNewName("");
+    setNewEmail("");
+    setNewPhone("");
+    setNewOrg("");
+    setNewContactTypes([]);
+    fetchContacts();
+  }
+
   function addTagToEdit() {
     const t = newTagInput.trim();
     if (t && !editTags.includes(t)) {
@@ -115,13 +156,24 @@ export default function ContactsPage() {
     setEditTags(editTags.filter((x) => x !== tag));
   }
 
+  function addContactType() {
+    const t = newContactTypeInput.trim().toLowerCase();
+    if (t && !newContactTypes.includes(t)) {
+      setNewContactTypes([...newContactTypes, t]);
+      setNewContactTypeInput("");
+    }
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Contacts</h1>
-        <p className="text-muted-foreground">
-          Search and filter contacts. Click a row to edit tags and notes.
-        </p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold">Contacts</h1>
+          <p className="text-muted-foreground">
+            Search and filter contacts. Click a row to edit tags and notes.
+          </p>
+        </div>
+        <Button onClick={() => setIsAdding(true)}>Add Contact</Button>
       </div>
 
       <Card>
@@ -234,6 +286,106 @@ export default function ContactsPage() {
         </CardContent>
       </Card>
 
+      {/* Add Contact Dialog */}
+      <Dialog open={isAdding} onOpenChange={setIsAdding}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add new contact</DialogTitle>
+            <DialogDescription>
+              Create a new contact in the CRM.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="newName">Name *</Label>
+              <Input
+                id="newName"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="Full name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="newEmail">Email</Label>
+              <Input
+                id="newEmail"
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder="email@example.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="newPhone">Phone</Label>
+              <Input
+                id="newPhone"
+                value={newPhone}
+                onChange={(e) => setNewPhone(e.target.value)}
+                placeholder="Phone number"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="newOrg">Organization</Label>
+              <Input
+                id="newOrg"
+                value={newOrg}
+                onChange={(e) => setNewOrg(e.target.value)}
+                placeholder="School or Company"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Contact Types</Label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {newContactTypes.map((t) => (
+                  <Badge 
+                    key={t} 
+                    variant="secondary"
+                    className="cursor-pointer"
+                    onClick={() => setNewContactTypes(newContactTypes.filter(x => x !== t))}
+                  >
+                    {t} ×
+                  </Badge>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="e.g. parent, teacher"
+                  value={newContactTypeInput}
+                  onChange={(e) => setNewContactTypeInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addContactType())}
+                />
+                <Button type="button" variant="outline" size="sm" onClick={addContactType}>
+                  Add
+                </Button>
+              </div>
+              <div className="flex gap-2 mt-1">
+                {["parent", "teacher", "school"].map(t => (
+                  <Button 
+                    key={t}
+                    type="button" 
+                    variant="ghost" 
+                    size="xs" 
+                    className="h-7 text-xs"
+                    onClick={() => !newContactTypes.includes(t) && setNewContactTypes([...newContactTypes, t])}
+                  >
+                    + {t}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAdding(false)}>
+              Cancel
+            </Button>
+            <Button onClick={addContact} disabled={saving}>
+              {saving ? "Adding…" : "Add Contact"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Contact Dialog */}
       <Dialog open={!!editingContact} onOpenChange={(o) => !o && setEditingContact(null)}>
         <DialogContent>
           <DialogHeader>

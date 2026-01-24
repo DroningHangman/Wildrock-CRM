@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import type { Booking, Contact } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -26,14 +27,52 @@ interface BookingRow extends Booking {
   contacts?: Contact | null;
 }
 
+type QuickFilter = "today" | "week" | "month" | "all";
+
 export default function BookingsPage() {
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  
+  // Set default to today
+  const today = new Date().toISOString().split("T")[0];
+  const [dateFrom, setDateFrom] = useState(today);
+  const [dateTo, setDateTo] = useState(today);
+  const [activeFilter, setActiveFilter] = useState<QuickFilter>("today");
+  
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [contactFilter, setContactFilter] = useState<string>("all");
+
+  const applyQuickFilter = useCallback((filter: QuickFilter) => {
+    const now = new Date();
+    const current = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    setActiveFilter(filter);
+
+    if (filter === "today") {
+      const d = current.toISOString().split("T")[0];
+      setDateFrom(d);
+      setDateTo(d);
+    } else if (filter === "week") {
+      // Start of week (Monday)
+      const day = current.getDay();
+      const diff = current.getDate() - day + (day === 0 ? -6 : 1);
+      const start = new Date(current.setDate(diff));
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      
+      setDateFrom(start.toISOString().split("T")[0]);
+      setDateTo(end.toISOString().split("T")[0]);
+    } else if (filter === "month") {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      
+      setDateFrom(start.toISOString().split("T")[0]);
+      setDateTo(end.toISOString().split("T")[0]);
+    } else if (filter === "all") {
+      setDateFrom("");
+      setDateTo("");
+    }
+  }, []);
 
   async function fetchBookings() {
     setLoading(true);
@@ -58,6 +97,7 @@ export default function BookingsPage() {
   useEffect(() => {
     fetchBookings();
     fetchContacts();
+    // Default filter is "today", set via initial state
   }, []);
 
   const programTypes = Array.from(
@@ -76,23 +116,28 @@ export default function BookingsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Bookings</h1>
-        <p className="text-muted-foreground">
-          Event bookings. Filter by date, program type, and contact.
-        </p>
+      <div className="flex justify-between items-end">
+        <div>
+          <h1 className="text-2xl font-bold">Bookings</h1>
+          <p className="text-muted-foreground">
+            Event bookings. Filter by date, program type, and contact.
+          </p>
+        </div>
       </div>
 
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-wrap gap-4 mb-6">
+          <div className="flex flex-wrap gap-4 mb-4">
             <div>
               <Label htmlFor="dateFrom">Date from</Label>
               <Input
                 id="dateFrom"
                 type="date"
                 value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
+                onChange={(e) => {
+                  setDateFrom(e.target.value);
+                  setActiveFilter("all");
+                }}
                 className="mt-1 w-[160px]"
               />
             </div>
@@ -102,7 +147,10 @@ export default function BookingsPage() {
                 id="dateTo"
                 type="date"
                 value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
+                onChange={(e) => {
+                  setDateTo(e.target.value);
+                  setActiveFilter("all");
+                }}
                 className="mt-1 w-[160px]"
               />
             </div>
@@ -138,6 +186,37 @@ export default function BookingsPage() {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="flex gap-2 mb-6 border-t pt-4">
+            <Button 
+              variant={activeFilter === "today" ? "default" : "outline"} 
+              size="sm"
+              onClick={() => applyQuickFilter("today")}
+            >
+              Today
+            </Button>
+            <Button 
+              variant={activeFilter === "week" ? "default" : "outline"} 
+              size="sm"
+              onClick={() => applyQuickFilter("week")}
+            >
+              This Week
+            </Button>
+            <Button 
+              variant={activeFilter === "month" ? "default" : "outline"} 
+              size="sm"
+              onClick={() => applyQuickFilter("month")}
+            >
+              This Month
+            </Button>
+            <Button 
+              variant={activeFilter === "all" && !dateFrom && !dateTo ? "default" : "outline"} 
+              size="sm"
+              onClick={() => applyQuickFilter("all")}
+            >
+              Clear Dates
+            </Button>
           </div>
 
           {loading ? (
