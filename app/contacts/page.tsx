@@ -351,7 +351,12 @@ export default function ContactsPage() {
               </div>
               <div className="flex flex-wrap gap-2">
                 {allowedContactTypes
-                  .filter(type => !newContactTypes.includes(type))
+                  .filter(type => {
+                    // Case-insensitive check - don't show if already selected
+                    return !newContactTypes.some(selected => 
+                      selected.toLowerCase() === type.toLowerCase()
+                    );
+                  })
                   .map(type => (
                     <Button
                       key={type}
@@ -440,7 +445,12 @@ export default function ContactsPage() {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {allowedContactTypes
-                        .filter(type => !editContactTypes.includes(type))
+                        .filter(type => {
+                          // Case-insensitive check - don't show if already selected
+                          return !editContactTypes.some(selected => 
+                            selected.toLowerCase() === type.toLowerCase()
+                          );
+                        })
                         .map(type => (
                           <Button
                             key={type}
