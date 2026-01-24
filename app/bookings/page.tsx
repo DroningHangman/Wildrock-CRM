@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -150,6 +151,7 @@ export default function BookingsPage() {
   const [activeFilter, setActiveFilter] = useState<QuickFilter>("today");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [contactFilter, setContactFilter] = useState<string>("all");
+  const [consentFilter, setConsentFilter] = useState<string>("all");
 
   const applyQuickFilter = useCallback((filter: QuickFilter) => {
     const now = new Date();
@@ -213,7 +215,14 @@ export default function BookingsPage() {
     const matchDate = (!dateFrom || d >= dateFrom) && (!dateTo || d <= dateTo);
     const matchType = typeFilter === "all" || b.booking_type === typeFilter;
     const matchContact = contactFilter === "all" || b.contact_id === contactFilter;
-    return matchDate && matchType && matchContact;
+    const matchConsent = consentFilter === "all" 
+      ? true 
+      : consentFilter === "yes" 
+        ? b.marketing_consent === true 
+        : consentFilter === "no" 
+          ? b.marketing_consent === false || b.marketing_consent === null
+          : true;
+    return matchDate && matchType && matchContact && matchConsent;
   });
 
   return (
@@ -288,6 +297,19 @@ export default function BookingsPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="w-[200px]">
+              <Label>Marketing Consent</Label>
+              <Select value={consentFilter} onValueChange={setConsentFilter}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="yes">Consented</SelectItem>
+                  <SelectItem value="no">Not Consented</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="flex gap-2 mb-6 border-t pt-4">
@@ -309,6 +331,7 @@ export default function BookingsPage() {
                   <TableHead>Program</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead className="text-right">Kids</TableHead>
+                  <TableHead>Consent</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -324,6 +347,15 @@ export default function BookingsPage() {
                     <TableCell>{b.program_name ?? "—"}</TableCell>
                     <TableCell>{b.contacts?.name ?? "—"}</TableCell>
                     <TableCell className="text-right">{b.kids_count ?? 0}</TableCell>
+                    <TableCell>
+                      {b.marketing_consent === true ? (
+                        <Badge variant="default" className="bg-green-600">Yes</Badge>
+                      ) : b.marketing_consent === false ? (
+                        <Badge variant="secondary">No</Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -363,6 +395,12 @@ export default function BookingsPage() {
                 <div>
                   <Label className="text-xs text-muted-foreground">Kids Count</Label>
                   <p className="font-medium">{selectedBooking.kids_count ?? 0}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Marketing Consent</Label>
+                  <p className="font-medium">
+                    {selectedBooking.marketing_consent === true ? 'Yes' : selectedBooking.marketing_consent === false ? 'No' : 'Not specified'}
+                  </p>
                 </div>
               </div>
 

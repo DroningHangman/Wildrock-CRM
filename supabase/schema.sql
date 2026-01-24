@@ -24,6 +24,7 @@ create table bookings (
   timeslot text,
   program_name text,
   kids_count int,
+  marketing_consent boolean, -- Common field: marketing/email consent (filterable)
   notes text,
   form_responses jsonb -- Stores dynamic form answers (allergies, emergency contact, etc.) per event type
 );

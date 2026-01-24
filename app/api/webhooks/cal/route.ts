@@ -43,6 +43,7 @@ export async function POST(req: Request) {
                        extractValue(responses?.phone) || 
                        extractValue(responses?.phone_number) || 
                        extractValue(responses?.phoneNumber) ||
+                       extractValue(responses?.attendeePhoneNumber) ||
                        extractValue(responses?.PHONE) ||
                        null
 
@@ -93,11 +94,42 @@ export async function POST(req: Request) {
     // Cal.com custom fields appear in the 'responses' object
     const kidsCount = parseInt(responses?.kids_count || responses?.kids || '0') || 0
 
-    // 4. Store all form responses in JSONB for flexible event-specific fields
+    // 4. Extract Marketing Consent (common field across all forms)
+    // Look for the consent field - it might be in various formats
+    const extractConsent = (field: unknown): boolean => {
+      if (!field || typeof field !== 'object') return false
+      const obj = field as Record<string, unknown>
+      if (typeof obj.value === 'boolean') return obj.value
+      if (typeof obj.value === 'string') {
+        const lower = obj.value.toLowerCase()
+        return lower === 'true' || lower === 'yes' || lower === '1'
+      }
+      return false
+    }
+    
+    // Check for consent in various field identifiers
+    const marketingConsent = extractConsent(responses?.marketing_consent) ||
+                             extractConsent(responses?.marketingConsent) ||
+                             extractConsent(responses?.newsletter) ||
+                             extractConsent(responses?.consent) ||
+                             // Check if any field label contains "consent" or "newsletter"
+                             (() => {
+                               if (!responses) return false
+                               for (const [key, value] of Object.entries(responses)) {
+                                 const field = value as Record<string, unknown>
+                                 const label = String(field?.label || '').toLowerCase()
+                                 if (label.includes('consent') || label.includes('newsletter')) {
+                                   return extractConsent(value)
+                                 }
+                               }
+                               return false
+                             })()
+
+    // 5. Store all form responses in JSONB for flexible event-specific fields
     // This captures all custom questions/answers from Cal.com forms
     const formResponses = responses || {}
 
-    // 5. Insert Booking
+    // 6. Insert Booking
     const { error: bookingError } = await supabaseAdmin
       .from('bookings')
       .insert({
@@ -107,6 +139,7 @@ export async function POST(req: Request) {
         program_name: eventType,
         booking_type: 'cal_sync',
         kids_count: kidsCount,
+        marketing_consent: marketingConsent,
         notes: `Cal.com Booking: ${eventType}`,
         form_responses: Object.keys(formResponses).length > 0 ? formResponses : null
       })
