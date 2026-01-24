@@ -6,6 +6,7 @@ import type { Contact, Document } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -23,6 +24,7 @@ export default function DocumentsPage() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadType, setUploadType] = useState<string>("waiver");
+  const [contactSearch, setContactSearch] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchContacts = useCallback(async () => {
@@ -137,11 +139,26 @@ export default function DocumentsPage() {
                 <SelectValue placeholder="Select contact" />
               </SelectTrigger>
               <SelectContent>
-                {contacts.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name ?? "—"}
-                  </SelectItem>
-                ))}
+                <div className="p-2">
+                  <Input
+                    placeholder="Search contacts..."
+                    value={contactSearch}
+                    onChange={(e) => setContactSearch(e.target.value)}
+                    className="h-8"
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  />
+                </div>
+                <div className="max-h-[200px] overflow-y-auto">
+                  {filteredContacts.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name ?? "—"}
+                    </SelectItem>
+                  ))}
+                  {filteredContacts.length === 0 && (
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">No contacts found</div>
+                  )}
+                </div>
               </SelectContent>
             </Select>
           </div>

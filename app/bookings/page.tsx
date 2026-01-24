@@ -150,6 +150,7 @@ export default function BookingsPage() {
   const [activeFilter, setActiveFilter] = useState<QuickFilter>("today");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [contactFilter, setContactFilter] = useState<string>("all");
+  const [contactSearch, setContactSearch] = useState<string>("");
 
   const applyQuickFilter = useCallback((filter: QuickFilter) => {
     const now = new Date();
@@ -279,12 +280,27 @@ export default function BookingsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  {contacts.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name ?? "—"}
-                    </SelectItem>
-                  ))}
+                  <div className="p-2">
+                    <Input
+                      placeholder="Search contacts..."
+                      value={contactSearch}
+                      onChange={(e) => setContactSearch(e.target.value)}
+                      className="h-8"
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                  <div className="max-h-[200px] overflow-y-auto">
+                    <SelectItem value="all">All</SelectItem>
+                    {filteredContacts.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name ?? "—"}
+                      </SelectItem>
+                    ))}
+                    {filteredContacts.length === 0 && (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">No contacts found</div>
+                    )}
+                  </div>
                 </SelectContent>
               </Select>
             </div>
