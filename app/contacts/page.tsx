@@ -60,7 +60,6 @@ export default function ContactsPage() {
   const [editTags, setEditTags] = useState<string[]>([]);
   const [editMarketingConsent, setEditMarketingConsent] = useState<boolean>(false);
   const [saving, setSaving] = useState(false);
-  const [newTagInput, setNewTagInput] = useState("");
   const [newContactTypeInput, setNewContactTypeInput] = useState("");
 
   // Add state
@@ -217,14 +216,6 @@ export default function ContactsPage() {
     setNewContactTypes([]);
     fetchContacts();
   }
-
-  const addTagToEdit = () => {
-    const t = newTagInput.trim();
-    if (t && !editTags.includes(t)) {
-      setEditTags([...editTags, t]);
-      setNewTagInput("");
-    }
-  };
 
   const handleDownload = async (doc: Document) => {
     if (!doc.url) return;
