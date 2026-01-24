@@ -205,6 +205,13 @@ export default function BookingsPage() {
     fetchContacts();
   }, []);
 
+  const filteredContacts = contacts.filter((c) => {
+    if (!contactSearch) return true;
+    const searchLower = contactSearch.toLowerCase();
+    return (c.name ?? "").toLowerCase().includes(searchLower) || 
+           (c.email ?? "").toLowerCase().includes(searchLower);
+  });
+
   const programTypes = Array.from(
     new Set(bookings.map((b) => b.booking_type).filter(Boolean) as string[])
   ).sort();
