@@ -25,22 +25,51 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No attendee found' }, { status: 400 })
     }
 
+    // Helper function to extract value from Cal.com response format
+    // Cal.com sends: {"label":"field_name","value":"actual_value","isHidden":false}
+    const extractValue = (field: unknown): string | null => {
+      if (!field || typeof field !== 'object') return null
+      const obj = field as Record<string, unknown>
+      if (typeof obj.value === 'string') return obj.value
+      if (typeof obj.value === 'object' && obj.value !== null) {
+        const nested = obj.value as Record<string, unknown>
+        if (typeof nested.value === 'string') return nested.value
+      }
+      return null
+    }
+
+    // Extract phone number from responses or attendee (check common field names)
+    const phoneNumber = attendee.phone ||
+                       extractValue(responses?.phone) || 
+                       extractValue(responses?.phone_number) || 
+                       extractValue(responses?.phoneNumber) ||
+                       extractValue(responses?.PHONE) ||
+                       null
+
     // 1. Find or Create Contact
     let contactId = null
     const { data: existingContact } = await supabaseAdmin
       .from('contacts')
-      .select('id')
+      .select('id, phone')
       .eq('email', attendee.email)
       .single()
 
     if (existingContact) {
       contactId = existingContact.id
+      // Update phone if we have it and contact doesn't have one
+      if (phoneNumber && !existingContact.phone) {
+        await supabaseAdmin
+          .from('contacts')
+          .update({ phone: phoneNumber })
+          .eq('id', contactId)
+      }
     } else {
       const { data: newContact, error: contactError } = await supabaseAdmin
         .from('contacts')
         .insert({
           name: attendee.name,
           email: attendee.email,
+          phone: phoneNumber,
           contact_types: ['parent'], // Default to parent for Cal.com bookings
           notes: 'Added automatically via Cal.com'
         })

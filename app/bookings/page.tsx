@@ -59,19 +59,66 @@ const EVENT_FIELD_MAPPINGS: Record<string, { label: string; priority: number }[]
   ],
 };
 
+// Helper function to extract clean value from Cal.com response format
+// Cal.com sends: {"label":"field_name","value":"actual_value","isHidden":false}
+function extractCleanValue(field: unknown): string {
+  if (!field || typeof field !== 'object') return '—'
+  const obj = field as Record<string, unknown>
+  
+  // Skip hidden fields
+  if (obj.isHidden === true) return '—'
+  
+  // Extract value
+  if (typeof obj.value === 'string') return obj.value
+  if (typeof obj.value === 'number') return String(obj.value)
+  if (typeof obj.value === 'boolean') return obj.value ? 'Yes' : 'No'
+  if (Array.isArray(obj.value)) {
+    if (obj.value.length === 0) return 'None'
+    return obj.value.map(v => typeof v === 'string' ? v : String(v)).join(', ')
+  }
+  if (typeof obj.value === 'object' && obj.value !== null) {
+    const nested = obj.value as Record<string, unknown>
+    // Handle nested value objects like location: {"value":"address","optionValue":""}
+    if (typeof nested.value === 'string') return nested.value
+    if (typeof nested.value === 'number') return String(nested.value)
+  }
+  
+  return '—'
+}
+
+// Helper function to get clean label from Cal.com response format
+function extractLabel(field: unknown, fallbackKey: string): string {
+  if (!field || typeof field !== 'object') return fallbackKey.replace(/_/g, ' ')
+  const obj = field as Record<string, unknown>
+  if (typeof obj.label === 'string') return obj.label
+  return fallbackKey.replace(/_/g, ' ')
+}
+
 // Helper function to get relevant fields for an event type
 function getRelevantFields(bookingType: string | null, formResponses: Record<string, unknown> | null | undefined) {
-  if (!formResponses || !bookingType) return [];
+  if (!formResponses) return [];
+  
+  // Filter out hidden fields and extract clean values
+  const allFields = Object.entries(formResponses)
+    .filter(([_, value]) => {
+      if (!value || typeof value !== 'object') return true
+      const obj = value as Record<string, unknown>
+      return obj.isHidden !== true // Skip hidden fields
+    })
+    .map(([key, value]) => ({
+      key,
+      value: extractCleanValue(value),
+      label: extractLabel(value, key),
+      priority: 999
+    }))
+    .filter(field => field.value !== '—') // Remove empty/hidden fields
+  
+  if (!bookingType) return allFields
   
   const mapping = EVENT_FIELD_MAPPINGS[bookingType];
   if (!mapping) {
     // If no mapping exists, show all fields (fallback)
-    return Object.entries(formResponses).map(([key, value]) => ({
-      key,
-      value,
-      label: key.replace(/_/g, ' '),
-      priority: 999
-    }));
+    return allFields
   }
   
   // Get fields from mapping that exist in formResponses
@@ -79,10 +126,11 @@ function getRelevantFields(bookingType: string | null, formResponses: Record<str
     .filter(field => formResponses.hasOwnProperty(field.label))
     .map(field => ({
       key: field.label,
-      value: formResponses[field.label],
-      label: field.label.replace(/_/g, ' '),
+      value: extractCleanValue(formResponses[field.label]),
+      label: extractLabel(formResponses[field.label], field.label),
       priority: field.priority
     }))
+    .filter(field => field.value !== '—') // Remove empty/hidden fields
     .sort((a, b) => a.priority - b.priority);
   
   return relevantFields;
@@ -324,7 +372,7 @@ export default function BookingsPage() {
                 </div>
               )}
 
-              {/* Form Responses Section - Event-Specific Fields */}
+              {/* Form Responses Section - Clean Display */}
               {selectedBooking.form_responses && Object.keys(selectedBooking.form_responses).length > 0 && (
                 <div className="border-t pt-4">
                   <Label className="text-sm font-semibold mb-3 block">
@@ -339,41 +387,11 @@ export default function BookingsPage() {
                           {label}
                         </Label>
                         <p className="text-sm font-medium">
-                          {typeof value === 'object' ? JSON.stringify(value) : String(value || '—')}
+                          {value}
                         </p>
                       </div>
                     ))}
                   </div>
-                  
-                  {/* Show any unmapped fields if they exist */}
-                  {(() => {
-                    const relevantKeys = getRelevantFields(selectedBooking.booking_type, selectedBooking.form_responses).map(f => f.key);
-                    const allKeys = Object.keys(selectedBooking.form_responses);
-                    const unmappedKeys = allKeys.filter(k => !relevantKeys.includes(k));
-                    
-                    if (unmappedKeys.length > 0) {
-                      return (
-                        <div className="mt-4 pt-4 border-t">
-                          <Label className="text-xs text-muted-foreground mb-2 block">Additional Information</Label>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {unmappedKeys.map(key => (
-                              <div key={key} className="space-y-1">
-                              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                                {key.replace(/_/g, ' ')}
-                              </Label>
-                              <p className="text-sm font-medium">
-                                {typeof selectedBooking.form_responses![key] === 'object' 
-                                  ? JSON.stringify(selectedBooking.form_responses![key]) 
-                                  : String(selectedBooking.form_responses![key] || '—')}
-                              </p>
-                            </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()}
                 </div>
               )}
             </div>
