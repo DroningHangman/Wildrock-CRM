@@ -30,7 +30,7 @@ export default function DocumentsPage() {
   const fetchContacts = useCallback(async () => {
     const { data } = await supabase
       .from("contacts")
-      .select("id, name")
+      .select("id, name, email")
       .order("name", { nullsFirst: false });
     const list = (data as Contact[]) ?? [];
     setContacts(list);

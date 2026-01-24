@@ -196,7 +196,7 @@ export default function BookingsPage() {
   }
 
   async function fetchContacts() {
-    const { data } = await supabase.from("contacts").select("id, name").order("name", { nullsFirst: false });
+    const { data } = await supabase.from("contacts").select("id, name, email").order("name", { nullsFirst: false });
     setContacts((data as Contact[]) ?? []);
   }
 
