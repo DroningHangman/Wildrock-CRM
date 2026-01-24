@@ -364,8 +364,8 @@ export default function ContactsPage() {
                     key={t}
                     type="button" 
                     variant="ghost" 
-                    size="xs" 
-                    className="h-7 text-xs"
+                    size="sm" 
+                    className="h-7 text-xs px-2"
                     onClick={() => !newContactTypes.includes(t) && setNewContactTypes([...newContactTypes, t])}
                   >
                     + {t}
