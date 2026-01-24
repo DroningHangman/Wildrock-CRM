@@ -60,7 +60,7 @@ export default function ContactsPage() {
   const [editTags, setEditTags] = useState<string[]>([]);
   const [editMarketingConsent, setEditMarketingConsent] = useState<boolean>(false);
   const [saving, setSaving] = useState(false);
-  const [newContactTypeInput, setNewContactTypeInput] = useState("");
+  const [newTagInput, setNewTagInput] = useState("");
 
   // Add state
   const [isAdding, setIsAdding] = useState(false);
@@ -71,9 +71,10 @@ export default function ContactsPage() {
   const [newContactTypes, setNewContactTypes] = useState<string[]>([]);
   const [newTags, setNewTags] = useState<string[]>([]);
   const [newMarketingConsent, setNewMarketingConsent] = useState<boolean>(false);
+  const [newTagInput, setNewTagInput] = useState("");
   
-  // Constrained tag options
-  const allowedTags = ["Parent", "Teacher", "Volunteer", "Prospect"];
+  // Constrained contact type options
+  const allowedContactTypes = ["Parent", "Teacher", "Volunteer", "Prospect"];
 
   async function fetchContacts() {
     setLoading(true);
@@ -123,11 +124,8 @@ export default function ContactsPage() {
     fetchRelatedData(contact.id);
   };
 
-  const contactTypeOptions = Array.from(
-    new Set(
-      contacts.flatMap((c) => c.contact_types ?? []).filter(Boolean)
-    )
-  ).sort();
+  // Use allowed contact types for filter dropdown
+  const contactTypeOptions = allowedContactTypes;
 
   const filtered = contacts.filter((c) => {
     const matchSearch =
@@ -255,14 +253,9 @@ export default function ContactsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All</SelectItem>
-                  {["parent", "teacher", "school"].map(t => (
-                    <SelectItem key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</SelectItem>
+                  {contactTypeOptions.map((t) => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
                   ))}
-                  {contactTypeOptions
-                    .filter((t) => !["parent", "teacher", "school"].includes(t))
-                    .map((t) => (
-                      <SelectItem key={t} value={t}>{t}</SelectItem>
-                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -348,6 +341,30 @@ export default function ContactsPage() {
               <Input value={newOrg} onChange={(e) => setNewOrg(e.target.value)} placeholder="School or Company" />
             </div>
             <div className="space-y-2">
+              <Label>Contact Types</Label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {newContactTypes.map(t => (
+                  <Badge key={t} variant="secondary" className="cursor-pointer" onClick={() => setNewContactTypes(newContactTypes.filter(x => x !== t))}>
+                    {t} ×
+                  </Badge>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {allowedContactTypes
+                  .filter(type => !newContactTypes.includes(type))
+                  .map(type => (
+                    <Button
+                      key={type}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setNewContactTypes([...newContactTypes, type])}
+                    >
+                      + {type}
+                    </Button>
+                  ))}
+              </div>
+            </div>
+            <div className="space-y-2">
               <Label>Tags</Label>
               <div className="flex flex-wrap gap-2 mb-2">
                 {newTags.map(t => (
@@ -356,20 +373,21 @@ export default function ContactsPage() {
                   </Badge>
                 ))}
               </div>
-              <div className="flex flex-wrap gap-2">
-                {allowedTags
-                  .filter(tag => !newTags.includes(tag))
-                  .map(tag => (
-                    <Button
-                      key={tag}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setNewTags([...newTags, tag])}
-                    >
-                      + {tag}
-                    </Button>
-                  ))}
-              </div>
+              <Input 
+                placeholder="Add tag..." 
+                value={newTagInput} 
+                onChange={(e) => setNewTagInput(e.target.value)} 
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const tag = newTagInput.trim();
+                    if (tag && !newTags.includes(tag)) {
+                      setNewTags([...newTags, tag]);
+                      setNewTagInput("");
+                    }
+                  }
+                }} 
+              />
             </div>
             <div className="flex items-center space-x-2">
               <Checkbox 
@@ -420,27 +438,41 @@ export default function ContactsPage() {
                     <div className="flex flex-wrap gap-2 mb-2">
                       {editContactTypes.map(t => <Badge key={t} variant="secondary" className="cursor-pointer" onClick={() => setEditContactTypes(editContactTypes.filter(x => x !== t))}>{t} ×</Badge>)}
                     </div>
-                    <Input placeholder="Add type..." value={newContactTypeInput} onChange={(e) => setNewContactTypeInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), editContactTypes.includes(newContactTypeInput.trim()) || (setEditContactTypes([...editContactTypes, newContactTypeInput.trim()]), setNewContactTypeInput("")))} />
+                    <div className="flex flex-wrap gap-2">
+                      {allowedContactTypes
+                        .filter(type => !editContactTypes.includes(type))
+                        .map(type => (
+                          <Button
+                            key={type}
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditContactTypes([...editContactTypes, type])}
+                          >
+                            + {type}
+                          </Button>
+                        ))}
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label>Tags</Label>
                     <div className="flex flex-wrap gap-2 mb-2">
                       {editTags.map(t => <Badge key={t} variant="outline" className="cursor-pointer" onClick={() => setEditTags(editTags.filter(x => x !== t))}>{t} ×</Badge>)}
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      {allowedTags
-                        .filter(tag => !editTags.includes(tag))
-                        .map(tag => (
-                          <Button
-                            key={tag}
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setEditTags([...editTags, tag])}
-                          >
-                            + {tag}
-                          </Button>
-                        ))}
-                    </div>
+                    <Input 
+                      placeholder="Add tag..." 
+                      value={newTagInput} 
+                      onChange={(e) => setNewTagInput(e.target.value)} 
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          const tag = newTagInput.trim();
+                          if (tag && !editTags.includes(tag)) {
+                            setEditTags([...editTags, tag]);
+                            setNewTagInput("");
+                          }
+                        }
+                      }} 
+                    />
                   </div>
                 </div>
                 <div className="col-span-full space-y-4">
