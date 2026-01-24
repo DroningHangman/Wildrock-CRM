@@ -114,6 +114,7 @@ export default function ContactsPage() {
     setEditContactTypes(contact.contact_types ?? []);
     setEditNotes(contact.notes ?? "");
     setEditTags(contact.tags ?? []);
+    setEditMarketingConsent(contact.marketing_consent ?? false);
     setActiveTab("profile");
     fetchRelatedData(contact.id);
   };
@@ -283,6 +284,7 @@ export default function ContactsPage() {
                   <TableHead>Types</TableHead>
                   <TableHead>Organization</TableHead>
                   <TableHead>Tags</TableHead>
+                  <TableHead>Marketing Consent</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -309,6 +311,15 @@ export default function ContactsPage() {
                           <Badge key={t} variant="outline">{t}</Badge>
                         ))}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      {c.marketing_consent === true ? (
+                        <Badge variant="default" className="bg-green-600">Yes</Badge>
+                      ) : c.marketing_consent === false ? (
+                        <Badge variant="secondary">No</Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
