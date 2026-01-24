@@ -70,6 +70,11 @@ export default function ContactsPage() {
   const [newPhone, setNewPhone] = useState("");
   const [newOrg, setNewOrg] = useState("");
   const [newContactTypes, setNewContactTypes] = useState<string[]>([]);
+  const [newTags, setNewTags] = useState<string[]>([]);
+  const [newMarketingConsent, setNewMarketingConsent] = useState<boolean>(false);
+  
+  // Constrained tag options
+  const allowedTags = ["Parent", "Teacher", "Volunteer", "Prospect"];
 
   async function fetchContacts() {
     setLoading(true);
@@ -195,7 +200,8 @@ export default function ContactsPage() {
       phone: newPhone || null,
       organization: newOrg || null,
       contact_types: newContactTypes.length ? newContactTypes : null,
-      tags: [],
+      tags: newTags.length ? newTags : null,
+      marketing_consent: newMarketingConsent,
       notes: ""
     });
     setSaving(false);
@@ -350,6 +356,40 @@ export default function ContactsPage() {
               <Label>Organization</Label>
               <Input value={newOrg} onChange={(e) => setNewOrg(e.target.value)} placeholder="School or Company" />
             </div>
+            <div className="space-y-2">
+              <Label>Tags</Label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {newTags.map(t => (
+                  <Badge key={t} variant="outline" className="cursor-pointer" onClick={() => setNewTags(newTags.filter(x => x !== t))}>
+                    {t} ×
+                  </Badge>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {allowedTags
+                  .filter(tag => !newTags.includes(tag))
+                  .map(tag => (
+                    <Button
+                      key={tag}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setNewTags([...newTags, tag])}
+                    >
+                      + {tag}
+                    </Button>
+                  ))}
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="new-marketing-consent" 
+                checked={newMarketingConsent}
+                onCheckedChange={(checked) => setNewMarketingConsent(checked === true)}
+              />
+              <Label htmlFor="new-marketing-consent" className="font-normal cursor-pointer">
+                Marketing Consent (Email/Newsletter)
+              </Label>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAdding(false)}>Cancel</Button>
@@ -396,7 +436,20 @@ export default function ContactsPage() {
                     <div className="flex flex-wrap gap-2 mb-2">
                       {editTags.map(t => <Badge key={t} variant="outline" className="cursor-pointer" onClick={() => setEditTags(editTags.filter(x => x !== t))}>{t} ×</Badge>)}
                     </div>
-                    <Input placeholder="Add tag..." value={newTagInput} onChange={(e) => setNewTagInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTagToEdit())} />
+                    <div className="flex flex-wrap gap-2">
+                      {allowedTags
+                        .filter(tag => !editTags.includes(tag))
+                        .map(tag => (
+                          <Button
+                            key={tag}
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditTags([...editTags, tag])}
+                          >
+                            + {tag}
+                          </Button>
+                        ))}
+                    </div>
                   </div>
                 </div>
                 <div className="col-span-full space-y-4">
