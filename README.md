@@ -1,6 +1,21 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Wildrock CRM
 
-## Getting Started
+Lightweight internal CRM MVP for Wildrock: playscape events, school programs, and donor engagement.
+
+**Stack:** Next.js 14 (App Router), TailwindCSS, ShadCN UI, Supabase. Hosted on Vercel.
+
+## Supabase setup
+
+1. Create a project at [supabase.com](https://supabase.com).
+2. Run `supabase/schema.sql` in the SQL Editor (Dashboard → SQL Editor).
+3. Create a storage bucket named `documents` (Dashboard → Storage). Store PDFs at `{contact_id}/{filename}.pdf`.
+4. Copy `.env.example` to `.env.local` and set your Supabase project URL and anon key.
+
+**Pages:** Contacts (search, filter, contact types, tags, notes) · Bookings (filter by date, booking type, contact) · Documents (upload/list/download PDFs per contact; waiver, medical_form, etc.) · Admin (CSV import, tags in use).
+
+**CSV import:** Headers `name`, `email`, `phone`, `contact_types`, `organization`, `tags`, `notes`. `name` required. `contact_types` and `tags` comma-separated.
+
+## Getting started
 
 First, run the development server:
 
