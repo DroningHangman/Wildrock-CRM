@@ -60,7 +60,7 @@ const EVENT_FIELD_MAPPINGS: Record<string, { label: string; priority: number }[]
 };
 
 // Helper function to get relevant fields for an event type
-function getRelevantFields(bookingType: string | null, formResponses: Record<string, any> | null | undefined) {
+function getRelevantFields(bookingType: string | null, formResponses: Record<string, unknown> | null | undefined) {
   if (!formResponses || !bookingType) return [];
   
   const mapping = EVENT_FIELD_MAPPINGS[bookingType];
