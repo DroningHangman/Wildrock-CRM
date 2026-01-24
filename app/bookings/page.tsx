@@ -22,6 +22,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface BookingRow extends Booking {
   contacts?: Contact | null;
@@ -29,10 +36,63 @@ interface BookingRow extends Booking {
 
 type QuickFilter = "today" | "week" | "month" | "all";
 
+// Event type field mappings - defines which fields to show for each event type
+const EVENT_FIELD_MAPPINGS: Record<string, { label: string; priority: number }[]> = {
+  // Summer Camp example
+  "summer_camp": [
+    { label: "emergency_contact", priority: 1 },
+    { label: "allergies", priority: 2 },
+    { label: "swimming_level", priority: 3 },
+    { label: "parent_phone", priority: 4 },
+  ],
+  // Winter Workshop example
+  "winter_workshop": [
+    { label: "skill_level", priority: 1 },
+    { label: "equipment_needed", priority: 2 },
+    { label: "dietary_restrictions", priority: 3 },
+  ],
+  // Birthday Party example
+  "birthday_party": [
+    { label: "number_of_guests", priority: 1 },
+    { label: "cake_preference", priority: 2 },
+    { label: "special_requests", priority: 3 },
+  ],
+};
+
+// Helper function to get relevant fields for an event type
+function getRelevantFields(bookingType: string | null, formResponses: Record<string, any> | null | undefined) {
+  if (!formResponses || !bookingType) return [];
+  
+  const mapping = EVENT_FIELD_MAPPINGS[bookingType];
+  if (!mapping) {
+    // If no mapping exists, show all fields (fallback)
+    return Object.entries(formResponses).map(([key, value]) => ({
+      key,
+      value,
+      label: key.replace(/_/g, ' '),
+      priority: 999
+    }));
+  }
+  
+  // Get fields from mapping that exist in formResponses
+  const relevantFields = mapping
+    .filter(field => formResponses.hasOwnProperty(field.label))
+    .map(field => ({
+      key: field.label,
+      value: formResponses[field.label],
+      label: field.label.replace(/_/g, ' '),
+      priority: field.priority
+    }))
+    .sort((a, b) => a.priority - b.priority);
+  
+  return relevantFields;
+}
+
 export default function BookingsPage() {
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedBooking, setSelectedBooking] = useState<BookingRow | null>(null);
   
   // Filters
   const today = new Date().toISOString().split("T")[0];
@@ -204,7 +264,11 @@ export default function BookingsPage() {
               </TableHeader>
               <TableBody>
                 {filtered.map((b) => (
-                  <TableRow key={b.id}>
+                  <TableRow 
+                    key={b.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => setSelectedBooking(b)}
+                  >
                     <TableCell>{b.date ?? "—"}</TableCell>
                     <TableCell>{b.booking_type ?? "—"}</TableCell>
                     <TableCell>{b.timeslot ?? "—"}</TableCell>
@@ -221,6 +285,101 @@ export default function BookingsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Booking Details Dialog */}
+      <Dialog open={!!selectedBooking} onOpenChange={(open) => !open && setSelectedBooking(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Booking Details</DialogTitle>
+            <DialogDescription>
+              {selectedBooking?.contacts?.name} - {selectedBooking?.program_name}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedBooking && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Date</Label>
+                  <p className="font-medium">{selectedBooking.date ?? "—"}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Timeslot</Label>
+                  <p className="font-medium">{selectedBooking.timeslot ?? "—"}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Booking Type</Label>
+                  <p className="font-medium">{selectedBooking.booking_type ?? "—"}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Kids Count</Label>
+                  <p className="font-medium">{selectedBooking.kids_count ?? 0}</p>
+                </div>
+              </div>
+
+              {selectedBooking.notes && (
+                <div>
+                  <Label className="text-xs text-muted-foreground">Notes</Label>
+                  <p className="text-sm mt-1">{selectedBooking.notes}</p>
+                </div>
+              )}
+
+              {/* Form Responses Section - Event-Specific Fields */}
+              {selectedBooking.form_responses && Object.keys(selectedBooking.form_responses).length > 0 && (
+                <div className="border-t pt-4">
+                  <Label className="text-sm font-semibold mb-3 block">
+                    {selectedBooking.booking_type 
+                      ? `${selectedBooking.booking_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} Details`
+                      : 'Form Responses'}
+                  </Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {getRelevantFields(selectedBooking.booking_type, selectedBooking.form_responses).map(({ key, value, label }) => (
+                      <div key={key} className="space-y-1">
+                        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          {label}
+                        </Label>
+                        <p className="text-sm font-medium">
+                          {typeof value === 'object' ? JSON.stringify(value) : String(value || '—')}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Show any unmapped fields if they exist */}
+                  {(() => {
+                    const relevantKeys = getRelevantFields(selectedBooking.booking_type, selectedBooking.form_responses).map(f => f.key);
+                    const allKeys = Object.keys(selectedBooking.form_responses);
+                    const unmappedKeys = allKeys.filter(k => !relevantKeys.includes(k));
+                    
+                    if (unmappedKeys.length > 0) {
+                      return (
+                        <div className="mt-4 pt-4 border-t">
+                          <Label className="text-xs text-muted-foreground mb-2 block">Additional Information</Label>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {unmappedKeys.map(key => (
+                              <div key={key} className="space-y-1">
+                              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                {key.replace(/_/g, ' ')}
+                              </Label>
+                              <p className="text-sm font-medium">
+                                {typeof selectedBooking.form_responses![key] === 'object' 
+                                  ? JSON.stringify(selectedBooking.form_responses![key]) 
+                                  : String(selectedBooking.form_responses![key] || '—')}
+                              </p>
+                            </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

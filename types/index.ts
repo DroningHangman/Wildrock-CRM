@@ -20,6 +20,7 @@ export interface Booking {
   program_name: string | null;
   kids_count: number | null;
   notes: string | null;
+  form_responses?: Record<string, any> | null; // JSONB field for dynamic form answers
   contacts?: Contact | null;
 }
 

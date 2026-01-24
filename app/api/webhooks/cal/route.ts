@@ -64,7 +64,11 @@ export async function POST(req: Request) {
     // Cal.com custom fields appear in the 'responses' object
     const kidsCount = parseInt(responses?.kids_count || responses?.kids || '0') || 0
 
-    // 4. Insert Booking
+    // 4. Store all form responses in JSONB for flexible event-specific fields
+    // This captures all custom questions/answers from Cal.com forms
+    const formResponses = responses || {}
+
+    // 5. Insert Booking
     const { error: bookingError } = await supabaseAdmin
       .from('bookings')
       .insert({
@@ -74,7 +78,8 @@ export async function POST(req: Request) {
         program_name: eventType,
         booking_type: 'cal_sync',
         kids_count: kidsCount,
-        notes: `Cal.com Booking: ${eventType}`
+        notes: `Cal.com Booking: ${eventType}`,
+        form_responses: Object.keys(formResponses).length > 0 ? formResponses : null
       })
 
     if (bookingError) throw bookingError

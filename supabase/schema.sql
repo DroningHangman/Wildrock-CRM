@@ -24,7 +24,8 @@ create table bookings (
   timeslot text,
   program_name text,
   kids_count int,
-  notes text
+  notes text,
+  form_responses jsonb -- Stores dynamic form answers (allergies, emergency contact, etc.) per event type
 );
 
 -- documents (metadata; actual files in storage bucket "documents")
