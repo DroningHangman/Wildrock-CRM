@@ -348,9 +348,9 @@ export default function BookingsPage() {
                     <TableCell>{b.contacts?.name ?? "—"}</TableCell>
                     <TableCell className="text-right">{b.kids_count ?? 0}</TableCell>
                     <TableCell>
-                      {b.marketing_consent === true ? (
+                      {b.contacts?.marketing_consent === true ? (
                         <Badge variant="default" className="bg-green-600">Yes</Badge>
-                      ) : b.marketing_consent === false ? (
+                      ) : b.contacts?.marketing_consent === false ? (
                         <Badge variant="secondary">No</Badge>
                       ) : (
                         <span className="text-muted-foreground text-xs">—</span>
