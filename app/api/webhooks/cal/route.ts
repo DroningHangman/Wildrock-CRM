@@ -68,7 +68,7 @@ export async function POST(req: Request) {
                              // Check if any field label contains "consent" or "newsletter"
                              (() => {
                                if (!responses) return false
-                               for (const [key, value] of Object.entries(responses)) {
+                               for (const [, value] of Object.entries(responses)) {
                                  const field = value as Record<string, unknown>
                                  const label = String(field?.label || '').toLowerCase()
                                  if (label.includes('consent') || label.includes('newsletter')) {
