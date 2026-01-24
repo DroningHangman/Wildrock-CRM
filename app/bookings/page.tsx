@@ -7,7 +7,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -286,19 +285,6 @@ export default function BookingsPage() {
                       {c.name ?? "—"}
                     </SelectItem>
                   ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="w-[200px]">
-              <Label>Marketing Consent</Label>
-              <Select value={consentFilter} onValueChange={setConsentFilter}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="yes">Consented</SelectItem>
-                  <SelectItem value="no">Not Consented</SelectItem>
                 </SelectContent>
               </Select>
             </div>
