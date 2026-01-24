@@ -28,24 +28,25 @@ export function Nav() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Hide on login page
   if (pathname === "/login") return null;
 
   return (
-    <nav className="w-full bg-slate-900 text-white border-b border-slate-800 shadow-lg">
+    <nav className="w-full bg-white border-b border-slate-200 shadow-sm">
       <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-10">
-          <Link href="/" className="text-xl font-bold tracking-tight hover:text-slate-300">
+        <div className="flex items-center gap-12">
+          <Link href="/" className="text-xl font-bold text-slate-900 hover:opacity-80">
             Wildrock CRM
           </Link>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-8">
             {links.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "text-sm font-medium transition-colors hover:text-slate-300",
-                  pathname === link.href ? "text-white underline underline-offset-8 decoration-2" : "text-slate-400"
+                  "text-sm font-bold transition-all py-1 border-b-2",
+                  pathname === link.href 
+                    ? "text-blue-600 border-blue-600" 
+                    : "text-slate-500 border-transparent hover:text-slate-900"
                 )}
               >
                 {link.label}
@@ -56,7 +57,7 @@ export function Nav() {
         
         <div className="flex items-center gap-4">
           {user && (
-            <span className="hidden md:inline text-xs text-slate-400">
+            <span className="hidden md:inline text-xs font-medium text-slate-500">
               {user.email}
             </span>
           )}
@@ -64,7 +65,7 @@ export function Nav() {
             <Button 
               variant="outline" 
               size="sm" 
-              className="text-slate-900 border-white bg-white hover:bg-slate-200"
+              className="border-slate-200 text-slate-700 hover:bg-slate-50"
               onClick={async () => {
                 await supabase.auth.signOut();
                 window.location.href = "/login";
@@ -73,7 +74,7 @@ export function Nav() {
               Logout
             </Button>
           ) : (
-            <Link href="/login" className="text-sm font-medium hover:text-slate-300">
+            <Link href="/login" className="text-sm font-bold text-slate-700 hover:text-slate-900">
               Login
             </Link>
           )}
