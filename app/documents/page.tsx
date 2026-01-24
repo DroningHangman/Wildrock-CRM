@@ -65,6 +65,13 @@ export default function DocumentsPage() {
     fetchDocs();
   }, [fetchDocs]);
 
+  const filteredContacts = contacts.filter((c) => {
+    if (!contactSearch) return true;
+    const searchLower = contactSearch.toLowerCase();
+    return (c.name ?? "").toLowerCase().includes(searchLower) || 
+           (c.email ?? "").toLowerCase().includes(searchLower);
+  });
+
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || !selectedId) return;
