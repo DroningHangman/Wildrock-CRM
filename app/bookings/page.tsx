@@ -34,12 +34,11 @@ export default function BookingsPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Set default to today
+  // Filters
   const today = new Date().toISOString().split("T")[0];
   const [dateFrom, setDateFrom] = useState(today);
   const [dateTo, setDateTo] = useState(today);
   const [activeFilter, setActiveFilter] = useState<QuickFilter>("today");
-  
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [contactFilter, setContactFilter] = useState<string>("all");
 
@@ -53,19 +52,16 @@ export default function BookingsPage() {
       setDateFrom(d);
       setDateTo(d);
     } else if (filter === "week") {
-      // Start of week (Monday)
       const day = current.getDay();
       const diff = current.getDate() - day + (day === 0 ? -6 : 1);
       const start = new Date(current.setDate(diff));
       const end = new Date(start);
       end.setDate(start.getDate() + 6);
-      
       setDateFrom(start.toISOString().split("T")[0]);
       setDateTo(end.toISOString().split("T")[0]);
     } else if (filter === "month") {
       const start = new Date(now.getFullYear(), now.getMonth(), 1);
       const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      
       setDateFrom(start.toISOString().split("T")[0]);
       setDateTo(end.toISOString().split("T")[0]);
     } else if (filter === "all") {
@@ -97,7 +93,6 @@ export default function BookingsPage() {
   useEffect(() => {
     fetchBookings();
     fetchContacts();
-    // Default filter is "today", set via initial state
   }, []);
 
   const programTypes = Array.from(
@@ -106,21 +101,19 @@ export default function BookingsPage() {
 
   const filtered = bookings.filter((b) => {
     const d = b.date ?? "";
-    const matchDate =
-      (!dateFrom || d >= dateFrom) && (!dateTo || d <= dateTo);
+    const matchDate = (!dateFrom || d >= dateFrom) && (!dateTo || d <= dateTo);
     const matchType = typeFilter === "all" || b.booking_type === typeFilter;
-    const matchContact =
-      contactFilter === "all" || b.contact_id === contactFilter;
+    const matchContact = contactFilter === "all" || b.contact_id === contactFilter;
     return matchDate && matchType && matchContact;
   });
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-end">
+      <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">Bookings</h1>
           <p className="text-muted-foreground">
-            Event bookings. Filter by date, program type, and contact.
+            Event bookings synced from Cal.com. (Read-only)
           </p>
         </div>
       </div>
@@ -189,34 +182,10 @@ export default function BookingsPage() {
           </div>
 
           <div className="flex gap-2 mb-6 border-t pt-4">
-            <Button 
-              variant={activeFilter === "today" ? "default" : "outline"} 
-              size="sm"
-              onClick={() => applyQuickFilter("today")}
-            >
-              Today
-            </Button>
-            <Button 
-              variant={activeFilter === "week" ? "default" : "outline"} 
-              size="sm"
-              onClick={() => applyQuickFilter("week")}
-            >
-              This Week
-            </Button>
-            <Button 
-              variant={activeFilter === "month" ? "default" : "outline"} 
-              size="sm"
-              onClick={() => applyQuickFilter("month")}
-            >
-              This Month
-            </Button>
-            <Button 
-              variant={activeFilter === "all" && !dateFrom && !dateTo ? "default" : "outline"} 
-              size="sm"
-              onClick={() => applyQuickFilter("all")}
-            >
-              Clear Dates
-            </Button>
+            <Button variant={activeFilter === "today" ? "default" : "outline"} size="sm" onClick={() => applyQuickFilter("today")}>Today</Button>
+            <Button variant={activeFilter === "week" ? "default" : "outline"} size="sm" onClick={() => applyQuickFilter("week")}>This Week</Button>
+            <Button variant={activeFilter === "month" ? "default" : "outline"} size="sm" onClick={() => applyQuickFilter("month")}>This Month</Button>
+            <Button variant={activeFilter === "all" && !dateFrom && !dateTo ? "default" : "outline"} size="sm" onClick={() => applyQuickFilter("all")}>Clear Dates</Button>
           </div>
 
           {loading ? (
@@ -240,21 +209,15 @@ export default function BookingsPage() {
                     <TableCell>{b.booking_type ?? "—"}</TableCell>
                     <TableCell>{b.timeslot ?? "—"}</TableCell>
                     <TableCell>{b.program_name ?? "—"}</TableCell>
-                    <TableCell>
-                      {b.contacts?.name ?? (b.contact_id ? "—" : "—")}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {b.kids_count ?? 0}
-                    </TableCell>
+                    <TableCell>{b.contacts?.name ?? "—"}</TableCell>
+                    <TableCell className="text-right">{b.kids_count ?? 0}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           )}
           {!loading && filtered.length === 0 && (
-            <p className="text-muted-foreground py-8 text-center">
-              No bookings match your filters.
-            </p>
+            <p className="text-muted-foreground py-8 text-center">No bookings match your filters.</p>
           )}
         </CardContent>
       </Card>

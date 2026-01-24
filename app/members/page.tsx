@@ -53,6 +53,14 @@ export default function MembersPage() {
   const [newStatus, setNewStatus] = useState("active");
   const [saving, setSaving] = useState(false);
 
+  // Edit state
+  const [editingMembership, setEditingMembership] = useState<MembershipRow | null>(null);
+  const [editType, setEditType] = useState("");
+  const [editStartDate, setEditStartDate] = useState("");
+  const [editEndDate, setEditEndDate] = useState("");
+  const [editCode, setEditCode] = useState("");
+  const [editStatus, setEditStatus] = useState("");
+
   async function fetchMemberships() {
     setLoading(true);
     const { data, error } = await supabase
@@ -109,6 +117,53 @@ export default function MembersPage() {
     setSelectedContactId("");
     setNewType("");
     setNewCode("");
+    fetchMemberships();
+  }
+
+  function openEdit(membership: MembershipRow) {
+    setEditingMembership(membership);
+    setEditType(membership.membership_type ?? "");
+    setEditStartDate(membership.start_date ?? "");
+    setEditEndDate(membership.end_date ?? "");
+    setEditCode(membership.code ?? "");
+    setEditStatus(membership.status ?? "active");
+  }
+
+  async function saveMembershipEdits() {
+    if (!editingMembership) return;
+    setSaving(true);
+    const { error } = await supabase
+      .from("memberships")
+      .update({
+        membership_type: editType,
+        start_date: editStartDate || null,
+        end_date: editEndDate || null,
+        code: editCode || null,
+        status: editStatus
+      })
+      .eq("id", editingMembership.id);
+    setSaving(false);
+    if (error) {
+      console.error("Error updating membership:", error);
+      alert("Failed to update membership");
+      return;
+    }
+    setEditingMembership(null);
+    fetchMemberships();
+  }
+
+  async function deleteMembership() {
+    if (!editingMembership) return;
+    if (!confirm("Are you sure you want to delete this membership?")) return;
+    setSaving(true);
+    const { error } = await supabase.from("memberships").delete().eq("id", editingMembership.id);
+    setSaving(false);
+    if (error) {
+      console.error("Error deleting membership:", error);
+      alert("Failed to delete membership");
+      return;
+    }
+    setEditingMembership(null);
     fetchMemberships();
   }
 
@@ -170,7 +225,7 @@ export default function MembersPage() {
               </TableHeader>
               <TableBody>
                 {filtered.map((m) => (
-                  <TableRow key={m.id}>
+                  <TableRow key={m.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openEdit(m)}>
                     <TableCell className="font-medium">
                       {m.contacts?.name ?? "—"}
                     </TableCell>
@@ -279,6 +334,80 @@ export default function MembersPage() {
             </Button>
             <Button onClick={addMembership} disabled={saving}>
               {saving ? "Adding…" : "Add Membership"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Membership Dialog */}
+      <Dialog open={!!editingMembership} onOpenChange={(o) => !o && setEditingMembership(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit membership</DialogTitle>
+            <DialogDescription>
+              Update details for {editingMembership?.contacts?.name}'s membership.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="editType">Membership Type *</Label>
+              <Input
+                id="editType"
+                value={editType}
+                onChange={(e) => setEditType(e.target.value)}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="editStart">Start Date</Label>
+                <Input
+                  id="editStart"
+                  type="date"
+                  value={editStartDate}
+                  onChange={(e) => setEditStartDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editEnd">End Date</Label>
+                <Input
+                  id="editEnd"
+                  type="date"
+                  value={editEndDate}
+                  onChange={(e) => setEditEndDate(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editCode">Membership Code</Label>
+              <Input
+                id="editCode"
+                value={editCode}
+                onChange={(e) => setEditCode(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select value={editStatus} onValueChange={setEditStatus}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="expired">Expired</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="destructive" onClick={deleteMembership} disabled={saving} className="sm:mr-auto">
+              Delete
+            </Button>
+            <Button variant="outline" onClick={() => setEditingMembership(null)}>
+              Cancel
+            </Button>
+            <Button onClick={saveMembershipEdits} disabled={saving}>
+              {saving ? "Saving…" : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>
