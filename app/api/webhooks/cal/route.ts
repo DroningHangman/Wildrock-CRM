@@ -111,7 +111,7 @@ export async function POST(req: Request) {
           email: attendee.email,
           phone: phoneNumber,
           marketing_consent: marketingConsent || false,
-          contact_types: ['parent'], // Default to parent for Cal.com bookings
+          contact_types: ['Parent'], // Default to Parent for Cal.com bookings
           notes: 'Added automatically via Cal.com'
         })
         .select()
