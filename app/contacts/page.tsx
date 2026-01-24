@@ -68,7 +68,6 @@ export default function ContactsPage() {
   const [newPhone, setNewPhone] = useState("");
   const [newOrg, setNewOrg] = useState("");
   const [newContactTypes, setNewContactTypes] = useState<string[]>([]);
-  const [newAddContactTypeInput, setNewAddContactTypeInput] = useState("");
 
   async function fetchContacts() {
     setLoading(true);

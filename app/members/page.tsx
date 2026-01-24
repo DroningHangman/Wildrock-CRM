@@ -345,7 +345,7 @@ export default function MembersPage() {
           <DialogHeader>
             <DialogTitle>Edit membership</DialogTitle>
             <DialogDescription>
-              Update details for {editingMembership?.contacts?.name}'s membership.
+              Update details for {editingMembership?.contacts?.name}&apos;s membership.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">

@@ -1,14 +1,14 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
-// Initialize Supabase with Service Role Key to bypass RLS for the webhook
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
-
 export async function POST(req: Request) {
   try {
+    // Initialize Supabase with Service Role Key inside the handler
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
     const payload = await req.json()
     
     // Cal.com sends data in a 'payload' object or directly depending on the trigger
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No booking data found' }, { status: 400 })
     }
 
-    const { startTime, endTime, attendees, type: eventType, responses } = bookingData
+    const { startTime, attendees, type: eventType, responses } = bookingData
     const attendee = attendees[0]
 
     if (!attendee) {
@@ -80,8 +80,9 @@ export async function POST(req: Request) {
     if (bookingError) throw bookingError
 
     return NextResponse.json({ success: true })
-  } catch (error: any) {
-    console.error('Webhook Error:', error.message)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    console.error('Webhook Error:', message)
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
