@@ -56,8 +56,12 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Protect all routes except /login and public assets
-  if (!user && !request.nextUrl.pathname.startsWith('/login') && request.nextUrl.pathname !== '/') {
+  // Protect all routes except /login, public assets, and webhooks
+  const isAuthPage = request.nextUrl.pathname.startsWith('/login')
+  const isWebhook = request.nextUrl.pathname.startsWith('/api/webhooks')
+  const isPublicRoot = request.nextUrl.pathname === '/'
+
+  if (!user && !isAuthPage && !isWebhook && !isPublicRoot) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
