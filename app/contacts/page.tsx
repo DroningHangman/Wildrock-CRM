@@ -60,7 +60,7 @@ export default function ContactsPage() {
   const [editTags, setEditTags] = useState<string[]>([]);
   const [editMarketingConsent, setEditMarketingConsent] = useState<boolean>(false);
   const [saving, setSaving] = useState(false);
-  const [newTagInput, setNewTagInput] = useState("");
+  const [editTagInput, setEditTagInput] = useState("");
 
   // Add state
   const [isAdding, setIsAdding] = useState(false);
@@ -460,15 +460,15 @@ export default function ContactsPage() {
                     </div>
                     <Input 
                       placeholder="Add tag..." 
-                      value={newTagInput} 
-                      onChange={(e) => setNewTagInput(e.target.value)} 
+                      value={editTagInput} 
+                      onChange={(e) => setEditTagInput(e.target.value)} 
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();
-                          const tag = newTagInput.trim();
+                          const tag = editTagInput.trim();
                           if (tag && !editTags.includes(tag)) {
                             setEditTags([...editTags, tag]);
-                            setNewTagInput("");
+                            setEditTagInput("");
                           }
                         }
                       }} 
