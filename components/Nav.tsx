@@ -9,7 +9,6 @@ import { useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
 
 const links = [
-  { href: "/", label: "Home" },
   { href: "/contacts", label: "Contacts" },
   { href: "/bookings", label: "Bookings" },
   { href: "/members", label: "Members" },
@@ -42,20 +41,20 @@ export function Nav() {
     router.refresh();
   }
 
-  // Hide nav on login page
+  // Completely hide nav only on login page
   if (pathname === "/login") return null;
 
   return (
-    <nav className="flex items-center justify-between border-b px-6 py-4">
-      <div className="flex items-center gap-4">
+    <nav className="flex items-center justify-between border-b bg-white px-6 py-4">
+      <div className="flex items-center gap-8">
         <Link
           href="/"
-          className="text-lg font-semibold text-foreground hover:opacity-80"
+          className="text-lg font-bold text-foreground hover:opacity-80"
         >
           Wildrock CRM
         </Link>
-        <div className="flex items-center gap-2">
-          {links.slice(1).map(({ href, label }) => (
+        <div className="flex items-center gap-1">
+          {links.map(({ href, label }) => (
             <Link
               key={href}
               href={href}
@@ -71,16 +70,22 @@ export function Nav() {
           ))}
         </div>
       </div>
-      {user && (
-        <div className="flex items-center gap-4">
-          <span className="text-xs text-muted-foreground hidden sm:inline-block">
-            {user.email}
-          </span>
-          <Button variant="ghost" size="sm" onClick={handleLogout}>
-            Logout
+      <div className="flex items-center gap-4">
+        {user ? (
+          <>
+            <span className="hidden text-xs text-muted-foreground lg:inline-block">
+              {user.email}
+            </span>
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
+              Logout
+            </Button>
+          </>
+        ) : (
+          <Button asChild variant="outline" size="sm">
+            <Link href="/login">Login</Link>
           </Button>
-        </div>
-      )}
+        )}
+      </div>
     </nav>
   );
 }
