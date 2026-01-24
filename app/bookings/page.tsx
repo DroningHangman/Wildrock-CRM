@@ -100,7 +100,8 @@ function getRelevantFields(bookingType: string | null, formResponses: Record<str
   
   // Filter out hidden fields and extract clean values
   const allFields = Object.entries(formResponses)
-    .filter(([_, value]) => {
+    .filter((entry) => {
+      const value = entry[1]
       if (!value || typeof value !== 'object') return true
       const obj = value as Record<string, unknown>
       return obj.isHidden !== true // Skip hidden fields
