@@ -45,46 +45,48 @@ export function Nav() {
   if (pathname === "/login") return null;
 
   return (
-    <nav className="flex items-center justify-between border-b bg-white px-6 py-4">
-      <div className="flex items-center gap-8">
-        <Link
-          href="/"
-          className="text-lg font-bold text-foreground hover:opacity-80"
-        >
-          Wildrock CRM
-        </Link>
-        <div className="flex items-center gap-1">
-          {links.map(({ href, label }) => (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                pathname === href
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
-            >
-              {label}
-            </Link>
-          ))}
+    <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6 py-4">
+      <div className="flex items-center justify-between max-w-7xl mx-auto">
+        <div className="flex items-center gap-8">
+          <Link
+            href="/"
+            className="text-lg font-bold text-foreground hover:opacity-80"
+          >
+            Wildrock CRM
+          </Link>
+          <div className="flex items-center gap-1">
+            {links.map(({ href, label }) => (
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  "rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  pathname === href
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                {label}
+              </Link>
+            ))}
+          </div>
         </div>
-      </div>
-      <div className="flex items-center gap-4">
-        {user ? (
-          <>
-            <span className="hidden text-xs text-muted-foreground lg:inline-block">
-              {user.email}
-            </span>
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
-              Logout
+        <div className="flex items-center gap-4">
+          {user ? (
+            <>
+              <span className="hidden text-xs text-muted-foreground lg:inline-block">
+                {user.email}
+              </span>
+              <Button variant="ghost" size="sm" onClick={handleLogout}>
+                Logout
+              </Button>
+            </>
+          ) : (
+            <Button asChild variant="outline" size="sm">
+              <Link href="/login">Login</Link>
             </Button>
-          </>
-        ) : (
-          <Button asChild variant="outline" size="sm">
-            <Link href="/login">Login</Link>
-          </Button>
-        )}
+          )}
+        </div>
       </div>
     </nav>
   );
