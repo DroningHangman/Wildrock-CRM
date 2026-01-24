@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -57,6 +58,7 @@ export default function ContactsPage() {
   const [editContactTypes, setEditContactTypes] = useState<string[]>([]);
   const [editNotes, setEditNotes] = useState("");
   const [editTags, setEditTags] = useState<string[]>([]);
+  const [editMarketingConsent, setEditMarketingConsent] = useState<boolean>(false);
   const [saving, setSaving] = useState(false);
   const [newTagInput, setNewTagInput] = useState("");
   const [newContactTypeInput, setNewContactTypeInput] = useState("");
@@ -150,7 +152,8 @@ export default function ContactsPage() {
         organization: editOrg || null,
         contact_types: editContactTypes.length ? editContactTypes : null,
         notes: editNotes, 
-        tags: editTags 
+        tags: editTags,
+        marketing_consent: editMarketingConsent
       })
       .eq("id", editingContact.id);
     setSaving(false);
@@ -385,9 +388,21 @@ export default function ContactsPage() {
                     <Input placeholder="Add tag..." value={newTagInput} onChange={(e) => setNewTagInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTagToEdit())} />
                   </div>
                 </div>
-                <div className="col-span-full space-y-2">
-                  <Label>Internal notes</Label>
-                  <Textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} className="min-h-[100px]" />
+                <div className="col-span-full space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="marketing-consent" 
+                      checked={editMarketingConsent}
+                      onCheckedChange={(checked) => setEditMarketingConsent(checked === true)}
+                    />
+                    <Label htmlFor="marketing-consent" className="font-normal cursor-pointer">
+                      Marketing Consent (Email/Newsletter)
+                    </Label>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Internal notes</Label>
+                    <Textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} className="min-h-[100px]" />
+                  </div>
                 </div>
               </div>
             )}

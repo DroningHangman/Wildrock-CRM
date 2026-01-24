@@ -47,53 +47,6 @@ export async function POST(req: Request) {
                        extractValue(responses?.PHONE) ||
                        null
 
-    // 1. Find or Create Contact
-    let contactId = null
-    const { data: existingContact } = await supabaseAdmin
-      .from('contacts')
-      .select('id, phone')
-      .eq('email', attendee.email)
-      .single()
-
-    if (existingContact) {
-      contactId = existingContact.id
-      // Update phone if we have it and contact doesn't have one
-      if (phoneNumber && !existingContact.phone) {
-        await supabaseAdmin
-          .from('contacts')
-          .update({ phone: phoneNumber })
-          .eq('id', contactId)
-      }
-    } else {
-      const { data: newContact, error: contactError } = await supabaseAdmin
-        .from('contacts')
-        .insert({
-          name: attendee.name,
-          email: attendee.email,
-          phone: phoneNumber,
-          contact_types: ['parent'], // Default to parent for Cal.com bookings
-          notes: 'Added automatically via Cal.com'
-        })
-        .select()
-        .single()
-
-      if (contactError) throw contactError
-      contactId = newContact.id
-    }
-
-    // 2. Parse Date and Timeslot
-    const startDate = new Date(startTime)
-    const dateStr = startDate.toISOString().split('T')[0]
-    const timeStr = startDate.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
-      minute: '2-digit',
-      hour12: true 
-    })
-
-    // 3. Extract Kids Count (looking for common field names in responses)
-    // Cal.com custom fields appear in the 'responses' object
-    const kidsCount = parseInt(responses?.kids_count || responses?.kids || '0') || 0
-
     // 4. Extract Marketing Consent (common field across all forms)
     // Look for the consent field - it might be in various formats
     const extractConsent = (field: unknown): boolean => {
@@ -125,11 +78,67 @@ export async function POST(req: Request) {
                                return false
                              })()
 
-    // 5. Store all form responses in JSONB for flexible event-specific fields
+    // 1. Find or Create Contact
+    let contactId = null
+    const { data: existingContact } = await supabaseAdmin
+      .from('contacts')
+      .select('id, phone, marketing_consent')
+      .eq('email', attendee.email)
+      .single()
+
+    if (existingContact) {
+      contactId = existingContact.id
+      // Update phone and/or consent if we have new information
+      const updates: { phone?: string; marketing_consent?: boolean } = {}
+      if (phoneNumber && !existingContact.phone) {
+        updates.phone = phoneNumber
+      }
+      // Update consent if provided (consent=true takes precedence, but don't overwrite existing true with false)
+      if (marketingConsent !== false) {
+        updates.marketing_consent = marketingConsent || existingContact.marketing_consent
+      }
+      if (Object.keys(updates).length > 0) {
+        await supabaseAdmin
+          .from('contacts')
+          .update(updates)
+          .eq('id', contactId)
+      }
+    } else {
+      const { data: newContact, error: contactError } = await supabaseAdmin
+        .from('contacts')
+        .insert({
+          name: attendee.name,
+          email: attendee.email,
+          phone: phoneNumber,
+          marketing_consent: marketingConsent || false,
+          contact_types: ['parent'], // Default to parent for Cal.com bookings
+          notes: 'Added automatically via Cal.com'
+        })
+        .select()
+        .single()
+
+      if (contactError) throw contactError
+      contactId = newContact.id
+    }
+
+    // 1. Parse Date and Timeslot
+    const startDate = new Date(startTime)
+    const dateStr = startDate.toISOString().split('T')[0]
+    const timeStr = startDate.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: true 
+    })
+
+    // 2. Extract Kids Count (looking for common field names in responses)
+    // Cal.com custom fields appear in the 'responses' object
+    const kidsCount = parseInt(responses?.kids_count || responses?.kids || '0') || 0
+
+    // 3. Store all form responses in JSONB for flexible event-specific fields
     // This captures all custom questions/answers from Cal.com forms
     const formResponses = responses || {}
 
-    // 6. Insert Booking
+    // 4. Insert Booking
     const { error: bookingError } = await supabaseAdmin
       .from('bookings')
       .insert({
@@ -139,7 +148,6 @@ export async function POST(req: Request) {
         program_name: eventType,
         booking_type: 'cal_sync',
         kids_count: kidsCount,
-        marketing_consent: marketingConsent,
         notes: `Cal.com Booking: ${eventType}`,
         form_responses: Object.keys(formResponses).length > 0 ? formResponses : null
       })

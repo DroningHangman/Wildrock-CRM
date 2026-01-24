@@ -8,6 +8,7 @@ export interface Contact {
   tags: string[] | null;
   notes: string | null;
   referred_by: string | null;
+  marketing_consent: boolean | null; // Marketing/email consent (contact-level property)
   created_at?: string;
 }
 
@@ -19,7 +20,6 @@ export interface Booking {
   timeslot: string | null;
   program_name: string | null;
   kids_count: number | null;
-  marketing_consent: boolean | null; // Common field: marketing/email consent
   notes: string | null;
   form_responses?: Record<string, unknown> | null; // JSONB field for dynamic form answers
   contacts?: Contact | null;

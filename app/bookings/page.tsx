@@ -218,9 +218,9 @@ export default function BookingsPage() {
     const matchConsent = consentFilter === "all" 
       ? true 
       : consentFilter === "yes" 
-        ? b.marketing_consent === true 
+        ? b.contacts?.marketing_consent === true 
         : consentFilter === "no" 
-          ? b.marketing_consent === false || b.marketing_consent === null
+          ? b.contacts?.marketing_consent === false || b.contacts?.marketing_consent === null
           : true;
     return matchDate && matchType && matchContact && matchConsent;
   });
@@ -399,7 +399,7 @@ export default function BookingsPage() {
                 <div>
                   <Label className="text-xs text-muted-foreground">Marketing Consent</Label>
                   <p className="font-medium">
-                    {selectedBooking.marketing_consent === true ? 'Yes' : selectedBooking.marketing_consent === false ? 'No' : 'Not specified'}
+                    {selectedBooking.contacts?.marketing_consent === true ? 'Yes' : selectedBooking.contacts?.marketing_consent === false ? 'No' : 'Not specified'}
                   </p>
                 </div>
               </div>

@@ -12,6 +12,7 @@ create table contacts (
   tags text[],
   notes text,
   referred_by uuid references contacts(id),
+  marketing_consent boolean, -- Marketing/email consent (contact-level property)
   created_at timestamp default now()
 );
 
@@ -24,7 +25,6 @@ create table bookings (
   timeslot text,
   program_name text,
   kids_count int,
-  marketing_consent boolean, -- Common field: marketing/email consent (filterable)
   notes text,
   form_responses jsonb -- Stores dynamic form answers (allergies, emergency contact, etc.) per event type
 );
