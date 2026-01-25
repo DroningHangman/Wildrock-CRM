@@ -14,6 +14,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const DOC_TYPES = ["waiver", "medical_form", "other"] as const;
 
@@ -25,6 +32,8 @@ export default function DocumentsPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadType, setUploadType] = useState<string>("waiver");
   const [contactSearch, setContactSearch] = useState<string>("");
+  const [viewingDoc, setViewingDoc] = useState<Document | null>(null);
+  const [viewUrl, setViewUrl] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchContacts = useCallback(async () => {
@@ -109,15 +118,17 @@ export default function DocumentsPage() {
   async function handleView(doc: Document) {
     const path = doc.url;
     if (!path) return;
+    setViewingDoc(doc);
     const { data, error } = await supabase.storage
       .from(BUCKET_DOCUMENTS)
       .createSignedUrl(path, 60);
     if (error) {
       console.error("View error:", error);
+      setViewingDoc(null);
       return;
     }
     if (data?.signedUrl) {
-      window.open(data.signedUrl, '_blank');
+      setViewUrl(data.signedUrl);
     }
   }
 
@@ -132,10 +143,17 @@ export default function DocumentsPage() {
       return;
     }
     if (data?.signedUrl) {
+      // Force download by fetching and creating blob
+      const response = await fetch(data.signedUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = data.signedUrl;
+      a.href = url;
       a.download = doc.name ?? "document.pdf";
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
     }
   }
 
@@ -266,6 +284,27 @@ export default function DocumentsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Document View Dialog */}
+      <Dialog open={!!viewingDoc} onOpenChange={(open) => !open && (setViewingDoc(null), setViewUrl(""))}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+          <DialogHeader className="p-6 pb-4">
+            <DialogTitle>{viewingDoc?.name ?? "Document"}</DialogTitle>
+            <DialogDescription>
+              {selectedContact?.name ?? "Contact"} - {viewingDoc?.type ?? "Document"}
+            </DialogDescription>
+          </DialogHeader>
+          {viewUrl && (
+            <div className="flex-1 overflow-hidden">
+              <iframe
+                src={viewUrl}
+                className="w-full h-[calc(90vh-120px)] border-0"
+                title={viewingDoc?.name ?? "Document"}
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
