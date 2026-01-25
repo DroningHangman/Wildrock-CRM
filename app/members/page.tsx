@@ -63,6 +63,27 @@ export default function MembersPage() {
   const [editCode, setEditCode] = useState("");
   const [editStatus, setEditStatus] = useState("");
 
+  // Export state
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const [exportColumns, setExportColumns] = useState<Record<string, boolean>>({
+    contact_name: true,
+    membership_type: true,
+    start_date: true,
+    end_date: true,
+    code: true,
+    status: true,
+  });
+
+  // Available export columns
+  const exportColumnOptions = [
+    { key: "contact_name", label: "Contact Name" },
+    { key: "membership_type", label: "Membership Type" },
+    { key: "start_date", label: "Start Date" },
+    { key: "end_date", label: "End Date" },
+    { key: "code", label: "Code" },
+    { key: "status", label: "Status" },
+  ];
+
   async function fetchMemberships() {
     setLoading(true);
     const { data, error } = await supabase
