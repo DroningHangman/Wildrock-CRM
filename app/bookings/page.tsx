@@ -148,7 +148,7 @@ export default function BookingsPage() {
   const [dateFrom, setDateFrom] = useState(today);
   const [dateTo, setDateTo] = useState(today);
   const [activeFilter, setActiveFilter] = useState<QuickFilter>("today");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [programFilter, setProgramFilter] = useState<string>("all");
   const [contactFilter, setContactFilter] = useState<string>("all");
   const [contactSearch, setContactSearch] = useState<string>("");
 
@@ -212,16 +212,16 @@ export default function BookingsPage() {
            (c.email ?? "").toLowerCase().includes(searchLower);
   });
 
-  const programTypes = Array.from(
-    new Set(bookings.map((b) => b.booking_type).filter(Boolean) as string[])
+  const programNames = Array.from(
+    new Set(bookings.map((b) => b.program_name).filter(Boolean) as string[])
   ).sort();
 
   const filtered = bookings.filter((b) => {
     const d = b.date ?? "";
     const matchDate = (!dateFrom || d >= dateFrom) && (!dateTo || d <= dateTo);
-    const matchType = typeFilter === "all" || b.booking_type === typeFilter;
+    const matchProgram = programFilter === "all" || b.program_name === programFilter;
     const matchContact = contactFilter === "all" || b.contact_id === contactFilter;
-    return matchDate && matchType && matchContact;
+    return matchDate && matchProgram && matchContact;
   });
 
   return (
@@ -265,16 +265,16 @@ export default function BookingsPage() {
               />
             </div>
             <div className="w-[200px]">
-              <Label>Booking type</Label>
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <Label>Program</Label>
+              <Select value={programFilter} onValueChange={setProgramFilter}>
                 <SelectTrigger className="mt-1">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All</SelectItem>
-                  {programTypes.map((t) => (
-                    <SelectItem key={t} value={t!}>
-                      {t}
+                  {programNames.map((p) => (
+                    <SelectItem key={p} value={p!}>
+                      {p}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -327,7 +327,6 @@ export default function BookingsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Date</TableHead>
-                  <TableHead>Type</TableHead>
                   <TableHead>Timeslot</TableHead>
                   <TableHead>Program</TableHead>
                   <TableHead>Contact</TableHead>
@@ -342,7 +341,6 @@ export default function BookingsPage() {
                     onClick={() => setSelectedBooking(b)}
                   >
                     <TableCell>{b.date ?? "—"}</TableCell>
-                    <TableCell>{b.booking_type ?? "—"}</TableCell>
                     <TableCell>{b.timeslot ?? "—"}</TableCell>
                     <TableCell>{b.program_name ?? "—"}</TableCell>
                     <TableCell>{b.contacts?.name ?? "—"}</TableCell>
