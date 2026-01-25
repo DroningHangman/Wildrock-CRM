@@ -106,6 +106,21 @@ export default function DocumentsPage() {
     fetchDocs();
   }
 
+  async function handleView(doc: Document) {
+    const path = doc.url;
+    if (!path) return;
+    const { data, error } = await supabase.storage
+      .from(BUCKET_DOCUMENTS)
+      .createSignedUrl(path, 60);
+    if (error) {
+      console.error("View error:", error);
+      return;
+    }
+    if (data?.signedUrl) {
+      window.open(data.signedUrl, '_blank');
+    }
+  }
+
   async function handleDownload(doc: Document) {
     const path = doc.url;
     if (!path) return;
@@ -224,13 +239,22 @@ export default function DocumentsPage() {
                           </span>
                         )}
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDownload(d)}
-                      >
-                        Download
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleView(d)}
+                        >
+                          View
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDownload(d)}
+                        >
+                          Download
+                        </Button>
+                      </div>
                     </li>
                   ))}
                 </ul>
