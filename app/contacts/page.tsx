@@ -671,7 +671,7 @@ export default function ContactsPage() {
             <div className="text-sm text-muted-foreground">
               <p>Active filters:</p>
               <ul className="list-disc list-inside mt-1">
-                {search && <li>Search: "{search}"</li>}
+                {search && <li>Search: &quot;{search}&quot;</li>}
                 {typeFilter !== "all" && <li>Contact Type: {typeFilter}</li>}
                 {!search && typeFilter === "all" && <li>No filters applied</li>}
               </ul>

@@ -169,6 +169,48 @@ export default function MembersPage() {
     fetchMemberships();
   }
 
+  const handleExportMemberships = () => {
+    // Get selected columns
+    const selectedColumns = exportColumnOptions.filter(col => exportColumns[col.key]);
+    
+    if (selectedColumns.length === 0) {
+      alert("Please select at least one column to export.");
+      return;
+    }
+
+    // Prepare data for export
+    const exportData = filtered.map(membership => {
+      const row: Record<string, string> = {};
+      
+      selectedColumns.forEach(col => {
+        if (col.key === "contact_name") {
+          row[col.label] = membership.contacts?.name ?? "";
+        } else {
+          const value = membership[col.key as keyof Membership];
+          row[col.label] = value != null ? String(value) : "";
+        }
+      });
+      
+      return row;
+    });
+
+    // Generate CSV
+    const csv = Papa.unparse(exportData);
+    
+    // Create download
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `memberships_export_${new Date().toISOString().split("T")[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    setIsExportOpen(false);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -450,7 +492,7 @@ export default function MembersPage() {
             <div className="text-sm text-muted-foreground">
               <p>Active filters:</p>
               <ul className="list-disc list-inside mt-1">
-                {search && <li>Search: "{search}"</li>}
+                {search && <li>Search: &quot;{search}&quot;</li>}
                 {statusFilter !== "all" && <li>Status: {statusFilter}</li>}
                 {!search && statusFilter === "all" && <li>No filters applied</li>}
               </ul>
