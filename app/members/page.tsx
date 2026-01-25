@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import type { Membership, Contact } from "@/types";
+import Papa from "papaparse";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -176,7 +178,10 @@ export default function MembersPage() {
             Manage member programs and status.
           </p>
         </div>
-        <Button onClick={() => setIsAdding(true)}>Add Membership</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setIsExportOpen(true)}>Export Data</Button>
+          <Button onClick={() => setIsAdding(true)}>Add Membership</Button>
+        </div>
       </div>
 
       <Card>
@@ -409,6 +414,51 @@ export default function MembersPage() {
             <Button onClick={saveMembershipEdits} disabled={saving}>
               {saving ? "Saving…" : "Save Changes"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Export Dialog */}
+      <Dialog open={isExportOpen} onOpenChange={setIsExportOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Export Memberships</DialogTitle>
+            <DialogDescription>
+              Select columns to export. Current filters will be applied ({filtered.length} memberships).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Select Columns</Label>
+              <div className="space-y-2 max-h-[300px] overflow-y-auto border rounded-md p-3">
+                {exportColumnOptions.map((col) => (
+                  <div key={col.key} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`export-${col.key}`}
+                      checked={exportColumns[col.key]}
+                      onCheckedChange={(checked) =>
+                        setExportColumns({ ...exportColumns, [col.key]: checked === true })
+                      }
+                    />
+                    <Label htmlFor={`export-${col.key}`} className="font-normal cursor-pointer">
+                      {col.label}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              <p>Active filters:</p>
+              <ul className="list-disc list-inside mt-1">
+                {search && <li>Search: "{search}"</li>}
+                {statusFilter !== "all" && <li>Status: {statusFilter}</li>}
+                {!search && statusFilter === "all" && <li>No filters applied</li>}
+              </ul>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsExportOpen(false)}>Cancel</Button>
+            <Button onClick={handleExportMemberships}>Export CSV</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase, BUCKET_DOCUMENTS } from "@/lib/supabase";
 import type { Contact, Booking, Membership, Document } from "@/types";
+import Papa from "papaparse";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,8 +74,35 @@ export default function ContactsPage() {
   const [newMarketingConsent, setNewMarketingConsent] = useState<boolean>(false);
   const [newTagInput, setNewTagInput] = useState("");
   
+  // Export state
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const [exportColumns, setExportColumns] = useState<Record<string, boolean>>({
+    name: true,
+    email: true,
+    phone: true,
+    organization: true,
+    contact_types: true,
+    tags: true,
+    marketing_consent: true,
+    notes: true,
+    created_at: false,
+  });
+  
   // Constrained contact type options
   const allowedContactTypes = ["Parent", "Teacher", "Volunteer", "Prospect"];
+  
+  // Available export columns
+  const exportColumnOptions = [
+    { key: "name", label: "Name" },
+    { key: "email", label: "Email" },
+    { key: "phone", label: "Phone" },
+    { key: "organization", label: "Organization" },
+    { key: "contact_types", label: "Contact Types" },
+    { key: "tags", label: "Tags" },
+    { key: "marketing_consent", label: "Marketing Consent" },
+    { key: "notes", label: "Notes" },
+    { key: "created_at", label: "Created At" },
+  ];
 
   async function fetchContacts() {
     setLoading(true);
@@ -222,6 +250,55 @@ export default function ContactsPage() {
     window.open(data.signedUrl, '_blank');
   };
 
+  const handleExportContacts = () => {
+    // Get selected columns
+    const selectedColumns = exportColumnOptions.filter(col => exportColumns[col.key]);
+    
+    if (selectedColumns.length === 0) {
+      alert("Please select at least one column to export.");
+      return;
+    }
+
+    // Prepare data for export
+    const exportData = filtered.map(contact => {
+      const row: Record<string, string> = {};
+      
+      selectedColumns.forEach(col => {
+        const value = contact[col.key as keyof Contact];
+        
+        if (col.key === "contact_types") {
+          row[col.label] = Array.isArray(value) ? (value as string[]).join(", ") : "";
+        } else if (col.key === "tags") {
+          row[col.label] = Array.isArray(value) ? (value as string[]).join(", ") : "";
+        } else if (col.key === "marketing_consent") {
+          row[col.label] = value === true ? "Yes" : value === false ? "No" : "";
+        } else if (col.key === "created_at" && value) {
+          row[col.label] = new Date(value as string).toLocaleDateString();
+        } else {
+          row[col.label] = value != null ? String(value) : "";
+        }
+      });
+      
+      return row;
+    });
+
+    // Generate CSV
+    const csv = Papa.unparse(exportData);
+    
+    // Create download
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `contacts_export_${new Date().toISOString().split("T")[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    setIsExportOpen(false);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -229,7 +306,10 @@ export default function ContactsPage() {
           <h1 className="text-2xl font-bold">Contacts</h1>
           <p className="text-muted-foreground">Search and manage your community.</p>
         </div>
-        <Button onClick={() => setIsAdding(true)}>Add Contact</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setIsExportOpen(true)}>Export Data</Button>
+          <Button onClick={() => setIsAdding(true)}>Add Contact</Button>
+        </div>
       </div>
 
       <Card>
@@ -555,6 +635,51 @@ export default function ContactsPage() {
               <Button variant="outline" onClick={() => setEditingContact(null)}>Close</Button>
               {activeTab === "profile" && <Button onClick={saveContactEdits} disabled={saving}>Save Changes</Button>}
             </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Export Dialog */}
+      <Dialog open={isExportOpen} onOpenChange={setIsExportOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Export Contacts</DialogTitle>
+            <DialogDescription>
+              Select columns to export. Current filters will be applied ({filtered.length} contacts).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Select Columns</Label>
+              <div className="space-y-2 max-h-[300px] overflow-y-auto border rounded-md p-3">
+                {exportColumnOptions.map((col) => (
+                  <div key={col.key} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`export-${col.key}`}
+                      checked={exportColumns[col.key]}
+                      onCheckedChange={(checked) =>
+                        setExportColumns({ ...exportColumns, [col.key]: checked === true })
+                      }
+                    />
+                    <Label htmlFor={`export-${col.key}`} className="font-normal cursor-pointer">
+                      {col.label}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              <p>Active filters:</p>
+              <ul className="list-disc list-inside mt-1">
+                {search && <li>Search: "{search}"</li>}
+                {typeFilter !== "all" && <li>Contact Type: {typeFilter}</li>}
+                {!search && typeFilter === "all" && <li>No filters applied</li>}
+              </ul>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsExportOpen(false)}>Cancel</Button>
+            <Button onClick={handleExportContacts}>Export CSV</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
