@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { supabase, BUCKET_DOCUMENTS } from "@/lib/supabase";
 import type { Contact, Booking, Membership, Document } from "@/types";
 import Papa from "papaparse";
@@ -34,6 +35,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+
+const CaptureWaiverModal = dynamic(
+  () => import("@/components/CaptureWaiverModal").then((m) => m.CaptureWaiverModal),
+  { ssr: false }
+);
 
 type ViewTab = "profile" | "bookings" | "memberships" | "documents";
 
@@ -74,6 +80,9 @@ export default function ContactsPage() {
   const [newMarketingConsent, setNewMarketingConsent] = useState<boolean>(false);
   const [newTagInput, setNewTagInput] = useState("");
   
+  // Capture Waiver state
+  const [isCaptureWaiverOpen, setIsCaptureWaiverOpen] = useState(false);
+
   // Export state
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [exportColumns, setExportColumns] = useState<Record<string, boolean>>({
@@ -617,6 +626,9 @@ export default function ContactsPage() {
 
             {activeTab === "documents" && (
               <div className="space-y-4">
+                <Button size="sm" onClick={() => setIsCaptureWaiverOpen(true)}>
+                  Capture Waiver
+                </Button>
                 {loadingRelated ? <p>Loading...</p> : contactDocuments.length === 0 ? <p className="text-muted-foreground italic">No documents uploaded.</p> : (
                   <div className="grid gap-2">{contactDocuments.map(d => (
                     <div key={d.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50">
@@ -638,6 +650,13 @@ export default function ContactsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <CaptureWaiverModal
+        open={isCaptureWaiverOpen}
+        onOpenChange={setIsCaptureWaiverOpen}
+        contact={editingContact}
+        onSuccess={() => editingContact && fetchRelatedData(editingContact.id)}
+      />
 
       {/* Export Dialog */}
       <Dialog open={isExportOpen} onOpenChange={setIsExportOpen}>
