@@ -320,7 +320,7 @@ export default function BookingsPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-4 mb-6 border-t pt-4">
+          <div className="space-y-4 mb-6 border-t pt-4">
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Date:</span>
               <div className="flex gap-2">
