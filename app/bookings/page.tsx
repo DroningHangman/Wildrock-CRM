@@ -36,6 +36,13 @@ interface BookingRow extends Booking {
 
 type QuickFilter = "today" | "week" | "month" | "all";
 
+// Program quick filters - maps display labels to Cal.com event type slugs
+const PROGRAM_QUICK_FILTERS: { label: string; value: string }[] = [
+  { label: "All", value: "all" },
+  { label: "Field Trip", value: "wildrock-field-trip" },
+  { label: "Birthday Party", value: "birthday-party" },
+];
+
 // Event type field mappings - defines which fields to show for each event type
 const EVENT_FIELD_MAPPINGS: Record<string, { label: string; priority: number }[]> = {
   // Summer Camp example
@@ -313,11 +320,31 @@ export default function BookingsPage() {
             </div>
           </div>
 
-          <div className="flex gap-2 mb-6 border-t pt-4">
-            <Button variant={activeFilter === "today" ? "default" : "outline"} size="sm" onClick={() => applyQuickFilter("today")}>Today</Button>
-            <Button variant={activeFilter === "week" ? "default" : "outline"} size="sm" onClick={() => applyQuickFilter("week")}>This Week</Button>
-            <Button variant={activeFilter === "month" ? "default" : "outline"} size="sm" onClick={() => applyQuickFilter("month")}>This Month</Button>
-            <Button variant={activeFilter === "all" && !dateFrom && !dateTo ? "default" : "outline"} size="sm" onClick={() => applyQuickFilter("all")}>Clear Dates</Button>
+          <div className="flex flex-wrap gap-4 mb-6 border-t pt-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Date:</span>
+              <div className="flex gap-2">
+                <Button variant={activeFilter === "today" ? "default" : "outline"} size="sm" onClick={() => applyQuickFilter("today")}>Today</Button>
+                <Button variant={activeFilter === "week" ? "default" : "outline"} size="sm" onClick={() => applyQuickFilter("week")}>This Week</Button>
+                <Button variant={activeFilter === "month" ? "default" : "outline"} size="sm" onClick={() => applyQuickFilter("month")}>This Month</Button>
+                <Button variant={activeFilter === "all" && !dateFrom && !dateTo ? "default" : "outline"} size="sm" onClick={() => applyQuickFilter("all")}>Clear Dates</Button>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Program:</span>
+              <div className="flex gap-2">
+                {PROGRAM_QUICK_FILTERS.map(({ label, value }) => (
+                  <Button
+                    key={value}
+                    variant={programFilter === value ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setProgramFilter(value)}
+                  >
+                    {label}
+                  </Button>
+                ))}
+              </div>
+            </div>
           </div>
 
           {loading ? (
