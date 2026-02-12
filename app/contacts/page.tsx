@@ -495,7 +495,7 @@ export default function ContactsPage() {
       {/* Contact 360 View Dialog */}
       <Dialog open={!!editingContact} onOpenChange={(o) => !o && setEditingContact(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
-          <div className="p-6 pb-0 flex justify-between items-start">
+          <div className="p-6 pb-0 pr-12 flex justify-between items-start">
             <div>
               <DialogTitle className="text-2xl font-bold">{editingContact?.name}</DialogTitle>
               <DialogDescription>Contact 360 View</DialogDescription>
