@@ -595,13 +595,48 @@ export default function ContactsPage() {
 
             {activeTab === "bookings" && (
               <div className="space-y-4">
-                {loadingRelated ? <p>Loading activity...</p> : contactBookings.length === 0 ? <p className="text-muted-foreground italic">No past bookings found.</p> : (
-                  <Table>
-                    <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Program</TableHead><TableHead>Kids</TableHead><TableHead>Timeslot</TableHead></TableRow></TableHeader>
-                    <TableBody>{contactBookings.map(b => (
-                      <TableRow key={b.id}><TableCell>{b.date}</TableCell><TableCell>{b.program_name}</TableCell><TableCell>{b.kids_count}</TableCell><TableCell>{b.timeslot}</TableCell></TableRow>
-                    ))}</TableBody>
-                  </Table>
+                {loadingRelated ? (
+                  <p>Loading activity...</p>
+                ) : (
+                  <>
+                    {/* Participation summary - computed from contactBookings, no extra DB calls */}
+                    {(() => {
+                      const total = contactBookings.length;
+                      const byType = contactBookings.reduce<Record<string, number>>((acc, b) => {
+                        const slug = b.program_name ?? "other";
+                        acc[slug] = (acc[slug] ?? 0) + 1;
+                        return acc;
+                      }, {});
+                      const labels: Record<string, string> = {
+                        "wildrock-field-trip": "Field Trip",
+                        "birthday-party": "Birthday Party",
+                        other: "Other",
+                      };
+                      return (
+                        <div className="rounded-lg border bg-muted/30 p-4">
+                          <p className="text-sm font-medium mb-2">Participation</p>
+                          <p className="text-2xl font-semibold">{total} event{total !== 1 ? "s" : ""} attended</p>
+                          {total > 0 && (
+                            <div className="flex flex-wrap gap-3 mt-2 text-sm text-muted-foreground">
+                              {Object.entries(byType).map(([slug, count]) => (
+                                <span key={slug}>{labels[slug] ?? slug}: {count}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                    {contactBookings.length === 0 ? (
+                      <p className="text-muted-foreground italic">No past bookings found.</p>
+                    ) : (
+                      <Table>
+                        <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Program</TableHead><TableHead>Kids</TableHead><TableHead>Timeslot</TableHead></TableRow></TableHeader>
+                        <TableBody>{contactBookings.map(b => (
+                          <TableRow key={b.id}><TableCell>{b.date}</TableCell><TableCell>{b.program_name}</TableCell><TableCell>{b.kids_count}</TableCell><TableCell>{b.timeslot}</TableCell></TableRow>
+                        ))}</TableBody>
+                      </Table>
+                    )}
+                  </>
                 )}
               </div>
             )}
