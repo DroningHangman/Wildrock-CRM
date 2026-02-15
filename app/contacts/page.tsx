@@ -48,6 +48,8 @@ export default function ContactsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [participationProgram, setParticipationProgram] = useState<string>("none");
+  const [participationMin, setParticipationMin] = useState<string>("1");
   
   // 360 View State
   const [activeTab, setActiveTab] = useState<ViewTab>("profile");
@@ -113,24 +115,41 @@ export default function ContactsPage() {
     { key: "created_at", label: "Created At" },
   ];
 
-  async function fetchContacts() {
+  const fetchContacts = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("contacts")
-      .select("*")
-      .order("name", { nullsFirst: false });
-    if (error) {
-      console.error("Error fetching contacts:", error);
-      setContacts([]);
+
+    if (participationProgram !== "none") {
+      // Use RPC when participation filter is active
+      const minCount = parseInt(participationMin) || 1;
+      const { data, error } = await supabase.rpc("contacts_by_participation", {
+        p_program_name: participationProgram === "any" ? null : participationProgram,
+        p_min_count: minCount,
+      });
+      if (error) {
+        console.error("Error fetching contacts by participation:", error);
+        setContacts([]);
+      } else {
+        setContacts((data as Contact[]) ?? []);
+      }
     } else {
-      setContacts((data as Contact[]) ?? []);
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("*")
+        .order("name", { nullsFirst: false });
+      if (error) {
+        console.error("Error fetching contacts:", error);
+        setContacts([]);
+      } else {
+        setContacts((data as Contact[]) ?? []);
+      }
     }
+
     setLoading(false);
-  }
+  }, [participationProgram, participationMin]);
 
   useEffect(() => {
     fetchContacts();
-  }, []);
+  }, [fetchContacts]);
 
   const fetchRelatedData = useCallback(async (contactId: string) => {
     setLoadingRelated(true);
@@ -348,6 +367,35 @@ export default function ContactsPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="w-[200px]">
+              <Label>Event participation</Label>
+              <Select value={participationProgram} onValueChange={setParticipationProgram}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No filter</SelectItem>
+                  <SelectItem value="any">Any event</SelectItem>
+                  <SelectItem value="wildrock-field-trip">Field Trip</SelectItem>
+                  <SelectItem value="birthday-party">Birthday Party</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {participationProgram !== "none" && (
+              <div className="w-[120px]">
+                <Label>Min events</Label>
+                <Select value={participationMin} onValueChange={setParticipationMin}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 5, 10].map((n) => (
+                      <SelectItem key={n} value={String(n)}>{n}+</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
         </CardHeader>
         <CardContent>
