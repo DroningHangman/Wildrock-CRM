@@ -56,10 +56,6 @@ export interface Entity {
   name: string;
   entity_type: 'household' | 'school' | 'organization';
   description: string | null;
-  website: string | null;
-  phone: string | null;
-  email: string | null;
-  address: string | null;
   metadata: Record<string, unknown> | null;
   created_at?: string;
   contact_entity_roles?: { count: number }[];

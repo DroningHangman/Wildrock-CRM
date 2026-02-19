@@ -51,10 +51,6 @@ export default function RelationshipsPage() {
   const [newName, setNewName] = useState("");
   const [newType, setNewType] = useState("household");
   const [newDescription, setNewDescription] = useState("");
-  const [newPhone, setNewPhone] = useState("");
-  const [newEmail, setNewEmail] = useState("");
-  const [newWebsite, setNewWebsite] = useState("");
-  const [newAddress, setNewAddress] = useState("");
 
   // Entity detail
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
@@ -65,14 +61,12 @@ export default function RelationshipsPage() {
   // Edit entity
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
-  const [editPhone, setEditPhone] = useState("");
-  const [editEmail, setEditEmail] = useState("");
-  const [editWebsite, setEditWebsite] = useState("");
-  const [editAddress, setEditAddress] = useState("");
 
   // Add member
   const [allContacts, setAllContacts] = useState<Contact[]>([]);
   const [selectedContactId, setSelectedContactId] = useState("");
+  const [contactSearch, setContactSearch] = useState("");
+  const [showContactDropdown, setShowContactDropdown] = useState(false);
   const [selectedRole, setSelectedRole] = useState("");
   const [isCustomRole, setIsCustomRole] = useState(false);
   const [customRoleName, setCustomRoleName] = useState("");
@@ -143,12 +137,8 @@ export default function RelationshipsPage() {
     setSelectedEntity(entity);
     setEditName(entity.name);
     setEditDescription(entity.description ?? "");
-    setEditPhone(entity.phone ?? "");
-    setEditEmail(entity.email ?? "");
-    setEditWebsite(entity.website ?? "");
-    setEditAddress(entity.address ?? "");
     setSelectedContactId("");
-    setSelectedRole("");
+    setContactSearch("");
     setIsCustomRole(false);
     setCustomRoleName("");
     fetchEntityMembers(entity.id);
@@ -166,10 +156,6 @@ export default function RelationshipsPage() {
       name: newName,
       entity_type: newType,
       description: newDescription || null,
-      phone: newPhone || null,
-      email: newEmail || null,
-      website: newWebsite || null,
-      address: newAddress || null,
     });
     setSaving(false);
     if (error) {
@@ -180,10 +166,6 @@ export default function RelationshipsPage() {
     setNewName("");
     setNewType("household");
     setNewDescription("");
-    setNewPhone("");
-    setNewEmail("");
-    setNewWebsite("");
-    setNewAddress("");
     fetchEntities();
   }
 
@@ -199,10 +181,6 @@ export default function RelationshipsPage() {
       .update({
         name: editName,
         description: editDescription || null,
-        phone: editPhone || null,
-        email: editEmail || null,
-        website: editWebsite || null,
-        address: editAddress || null,
       })
       .eq("id", selectedEntity.id);
     setSaving(false);
@@ -280,6 +258,7 @@ export default function RelationshipsPage() {
     }
 
     setSelectedContactId("");
+    setContactSearch("");
     setIsCustomRole(false);
     setCustomRoleName("");
     fetchEntityMembers(selectedEntity.id);
@@ -315,6 +294,15 @@ export default function RelationshipsPage() {
       !search || e.name.toLowerCase().includes(search.toLowerCase());
     const matchType = typeFilter === "all" || e.entity_type === typeFilter;
     return matchSearch && matchType;
+  });
+
+  const filteredContacts = allContacts.filter((c) => {
+    if (!contactSearch) return true;
+    const q = contactSearch.toLowerCase();
+    return (
+      (c.name ?? "").toLowerCase().includes(q) ||
+      (c.email ?? "").toLowerCase().includes(q)
+    );
   });
 
   /* ── Render ── */
@@ -451,37 +439,6 @@ export default function RelationshipsPage() {
                 placeholder="Optional description"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Phone</Label>
-                <Input
-                  value={newPhone}
-                  onChange={(e) => setNewPhone(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Email</Label>
-                <Input
-                  type="email"
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Website</Label>
-              <Input
-                value={newWebsite}
-                onChange={(e) => setNewWebsite(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Address</Label>
-              <Input
-                value={newAddress}
-                onChange={(e) => setNewAddress(e.target.value)}
-              />
-            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCreating(false)}>
@@ -532,35 +489,6 @@ export default function RelationshipsPage() {
                   <Input
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Phone</Label>
-                  <Input
-                    value={editPhone}
-                    onChange={(e) => setEditPhone(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Email</Label>
-                  <Input
-                    type="email"
-                    value={editEmail}
-                    onChange={(e) => setEditEmail(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Website</Label>
-                  <Input
-                    value={editWebsite}
-                    onChange={(e) => setEditWebsite(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Address</Label>
-                  <Input
-                    value={editAddress}
-                    onChange={(e) => setEditAddress(e.target.value)}
                   />
                 </div>
               </div>
@@ -622,25 +550,55 @@ export default function RelationshipsPage() {
               <div className="rounded-lg border p-4 space-y-3">
                 <p className="text-sm font-medium">Add member</p>
                 <div className="flex flex-wrap gap-3 items-end">
-                  <div className="flex-1 min-w-[180px] space-y-1">
+                  {/* Searchable contact picker */}
+                  <div className="flex-1 min-w-[200px] space-y-1">
                     <Label className="text-xs">Contact</Label>
-                    <Select
-                      value={selectedContactId}
-                      onValueChange={setSelectedContactId}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select contact…" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {allContacts.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name ?? c.email ?? "Unnamed"}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="relative">
+                      <Input
+                        value={contactSearch}
+                        onChange={(e) => {
+                          setContactSearch(e.target.value);
+                          setSelectedContactId("");
+                          setShowContactDropdown(true);
+                        }}
+                        onFocus={() => setShowContactDropdown(true)}
+                        placeholder="Search contacts…"
+                      />
+                      {showContactDropdown && !selectedContactId && (
+                        <div className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-[200px] overflow-y-auto">
+                          {filteredContacts.length === 0 ? (
+                            <div className="px-3 py-2 text-sm text-muted-foreground">
+                              No contacts found
+                            </div>
+                          ) : (
+                            filteredContacts.slice(0, 20).map((c) => (
+                              <div
+                                key={c.id}
+                                className="px-3 py-2 hover:bg-muted cursor-pointer text-sm"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => {
+                                  setSelectedContactId(c.id);
+                                  setContactSearch(c.name ?? c.email ?? "");
+                                  setShowContactDropdown(false);
+                                }}
+                              >
+                                <span className="font-medium">
+                                  {c.name ?? "Unnamed"}
+                                </span>
+                                {c.email && (
+                                  <span className="text-muted-foreground ml-2">
+                                    {c.email}
+                                  </span>
+                                )}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
+                  {/* Role picker */}
                   <div className="flex-1 min-w-[180px] space-y-1">
                     <Label className="text-xs">Role</Label>
                     {isCustomRole ? (

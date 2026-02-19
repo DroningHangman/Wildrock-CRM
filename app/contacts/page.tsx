@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { supabase, BUCKET_DOCUMENTS } from "@/lib/supabase";
-import type { Contact, Booking, Membership, Document, ContactEntityRole } from "@/types";
+import type { Contact, Booking, Membership, Document, ContactEntityRole, Entity, RelationshipType } from "@/types";
 import Papa from "papaparse";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -59,6 +59,16 @@ export default function ContactsPage() {
   const [contactDocuments, setContactDocuments] = useState<Document[]>([]);
   const [contactEntityRoles, setContactEntityRoles] = useState<ContactEntityRole[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
+
+  // Add relationship state
+  const [allEntities, setAllEntities] = useState<Entity[]>([]);
+  const [addRelTypes, setAddRelTypes] = useState<RelationshipType[]>([]);
+  const [addRelEntityId, setAddRelEntityId] = useState("");
+  const [addRelEntitySearch, setAddRelEntitySearch] = useState("");
+  const [showEntityDropdown, setShowEntityDropdown] = useState(false);
+  const [addRelRole, setAddRelRole] = useState("");
+  const [addRelIsCustom, setAddRelIsCustom] = useState(false);
+  const [addRelCustomName, setAddRelCustomName] = useState("");
 
   // Edit form state
   const [editName, setEditName] = useState("");
@@ -152,6 +162,12 @@ export default function ContactsPage() {
     fetchContacts();
   }, [fetchContacts]);
 
+  useEffect(() => {
+    if (activeTab === "relationships" && allEntities.length === 0) {
+      fetchAllEntities();
+    }
+  }, [activeTab, allEntities.length, fetchAllEntities]);
+
   const fetchRelatedData = useCallback(async (contactId: string) => {
     setLoadingRelated(true);
     
@@ -168,6 +184,91 @@ export default function ContactsPage() {
     setContactEntityRoles((rolesRes.data as ContactEntityRole[]) ?? []);
     setLoadingRelated(false);
   }, []);
+
+  const fetchAllEntities = useCallback(async () => {
+    const { data } = await supabase.from("entities").select("*").order("name");
+    setAllEntities((data as Entity[]) ?? []);
+  }, []);
+
+  const fetchRelTypesForEntity = useCallback(async (entityType: string) => {
+    const { data } = await supabase
+      .from("relationship_types")
+      .select("*")
+      .eq("entity_type", entityType)
+      .order("is_default", { ascending: false })
+      .order("name");
+    const types = (data as RelationshipType[]) ?? [];
+    setAddRelTypes(types);
+    const defaultType = types.find((t) => t.is_default);
+    setAddRelRole(defaultType?.name ?? "");
+  }, []);
+
+  const handleEntitySelect = (entity: Entity) => {
+    setAddRelEntityId(entity.id);
+    setAddRelEntitySearch(entity.name);
+    setShowEntityDropdown(false);
+    fetchRelTypesForEntity(entity.entity_type);
+  };
+
+  async function addRelationship() {
+    if (!editingContact || !addRelEntityId) {
+      alert("Please select an entity");
+      return;
+    }
+    const role = addRelIsCustom ? addRelCustomName.trim() : addRelRole;
+    if (!role) {
+      alert("Please select or enter a role");
+      return;
+    }
+
+    if (addRelIsCustom && addRelCustomName.trim()) {
+      const entity = allEntities.find((e) => e.id === addRelEntityId);
+      if (entity) {
+        await supabase
+          .from("relationship_types")
+          .upsert(
+            { entity_type: entity.entity_type, name: addRelCustomName.trim(), is_default: false },
+            { onConflict: "entity_type,name" }
+          );
+      }
+    }
+
+    setSaving(true);
+    const { error } = await supabase.from("contact_entity_roles").insert({
+      contact_id: editingContact.id,
+      entity_id: addRelEntityId,
+      role,
+    });
+    setSaving(false);
+
+    if (error) {
+      if (error.code === "23505") {
+        alert("This contact already has this role in this entity");
+      } else {
+        alert("Failed to add relationship");
+      }
+      return;
+    }
+
+    setAddRelEntityId("");
+    setAddRelEntitySearch("");
+    setAddRelRole("");
+    setAddRelIsCustom(false);
+    setAddRelCustomName("");
+    setAddRelTypes([]);
+    fetchRelatedData(editingContact.id);
+  }
+
+  async function removeRelationship(roleId: string) {
+    if (!editingContact) return;
+    if (!confirm("Remove this relationship?")) return;
+    const { error } = await supabase.from("contact_entity_roles").delete().eq("id", roleId);
+    if (error) {
+      alert("Failed to remove relationship");
+      return;
+    }
+    fetchRelatedData(editingContact.id);
+  }
 
   const openEdit = (contact: Contact) => {
     setEditingContact(contact);
@@ -730,7 +831,7 @@ export default function ContactsPage() {
             {activeTab === "relationships" && (
               <div className="space-y-4">
                 {loadingRelated ? <p>Loading...</p> : contactEntityRoles.length === 0 ? (
-                  <p className="text-muted-foreground italic">No relationships found. Associate this contact with entities from the Relationships page.</p>
+                  <p className="text-muted-foreground italic">No relationships yet. Add one below.</p>
                 ) : (
                   <Table>
                     <TableHeader>
@@ -738,6 +839,7 @@ export default function ContactsPage() {
                         <TableHead>Entity</TableHead>
                         <TableHead>Type</TableHead>
                         <TableHead>Role</TableHead>
+                        <TableHead className="w-[80px]"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -750,11 +852,107 @@ export default function ContactsPage() {
                             </Badge>
                           </TableCell>
                           <TableCell><Badge variant="outline">{r.role}</Badge></TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => removeRelationship(r.id)}>
+                              Remove
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
                 )}
+
+                {/* Add relationship */}
+                <div className="rounded-lg border p-4 space-y-3">
+                  <p className="text-sm font-medium">Add relationship</p>
+                  <div className="flex flex-wrap gap-3 items-end">
+                    {/* Searchable entity picker */}
+                    <div className="flex-1 min-w-[200px] space-y-1">
+                      <Label className="text-xs">Entity</Label>
+                      <div className="relative">
+                        <Input
+                          value={addRelEntitySearch}
+                          onChange={(e) => {
+                            setAddRelEntitySearch(e.target.value);
+                            setAddRelEntityId("");
+                            setAddRelTypes([]);
+                            setAddRelRole("");
+                            setShowEntityDropdown(true);
+                          }}
+                          onFocus={() => setShowEntityDropdown(true)}
+                          placeholder="Search entities…"
+                        />
+                        {showEntityDropdown && !addRelEntityId && (
+                          <div className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-[200px] overflow-y-auto">
+                            {(() => {
+                              const q = addRelEntitySearch.toLowerCase();
+                              const matches = allEntities.filter(
+                                (e) => !q || e.name.toLowerCase().includes(q)
+                              );
+                              return matches.length === 0 ? (
+                                <div className="px-3 py-2 text-sm text-muted-foreground">No entities found</div>
+                              ) : (
+                                matches.slice(0, 20).map((e) => (
+                                  <div
+                                    key={e.id}
+                                    className="px-3 py-2 hover:bg-muted cursor-pointer text-sm flex items-center gap-2"
+                                    onMouseDown={(ev) => ev.preventDefault()}
+                                    onClick={() => handleEntitySelect(e)}
+                                  >
+                                    <span className="font-medium">{e.name}</span>
+                                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                      {e.entity_type === "household" ? "Household" : e.entity_type === "school" ? "School" : "Organization"}
+                                    </Badge>
+                                  </div>
+                                ))
+                              );
+                            })()}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Role picker */}
+                    {addRelEntityId && (
+                      <div className="flex-1 min-w-[180px] space-y-1">
+                        <Label className="text-xs">Role</Label>
+                        {addRelIsCustom ? (
+                          <div className="flex gap-2">
+                            <Input
+                              value={addRelCustomName}
+                              onChange={(e) => setAddRelCustomName(e.target.value)}
+                              placeholder="Enter role name…"
+                              className="flex-1"
+                              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addRelationship(); } }}
+                            />
+                            <Button variant="ghost" size="sm" onClick={() => {
+                              setAddRelIsCustom(false);
+                              setAddRelCustomName("");
+                              const def = addRelTypes.find((t) => t.is_default);
+                              setAddRelRole(def?.name ?? "");
+                            }}>Cancel</Button>
+                          </div>
+                        ) : (
+                          <Select value={addRelRole} onValueChange={(val) => {
+                            if (val === "__custom__") { setAddRelIsCustom(true); setAddRelRole(""); }
+                            else { setAddRelRole(val); }
+                          }}>
+                            <SelectTrigger><SelectValue placeholder="Select role…" /></SelectTrigger>
+                            <SelectContent>
+                              {addRelTypes.map((rt) => (
+                                <SelectItem key={rt.id} value={rt.name}>{rt.name}{rt.is_default ? " (default)" : ""}</SelectItem>
+                              ))}
+                              <SelectItem value="__custom__">+ Add new role…</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+                    )}
+
+                    <Button onClick={addRelationship} disabled={saving || !addRelEntityId} size="sm">Add</Button>
+                  </div>
+                </div>
               </div>
             )}
           </div>

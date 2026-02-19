@@ -57,10 +57,6 @@ create table entities (
   name text not null,
   entity_type text not null, -- 'household', 'school', 'organization'
   description text,
-  website text,
-  phone text,
-  email text,
-  address text,
   metadata jsonb,
   created_at timestamp default now()
 );
