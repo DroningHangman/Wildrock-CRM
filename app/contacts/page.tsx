@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { supabase, BUCKET_DOCUMENTS } from "@/lib/supabase";
-import type { Contact, Booking, Membership, Document } from "@/types";
+import type { Contact, Booking, Membership, Document, ContactEntityRole } from "@/types";
 import Papa from "papaparse";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,7 +41,7 @@ const CaptureWaiverModal = dynamic(
   { ssr: false }
 );
 
-type ViewTab = "profile" | "bookings" | "memberships" | "documents";
+type ViewTab = "profile" | "bookings" | "memberships" | "documents" | "relationships";
 
 export default function ContactsPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -57,6 +57,7 @@ export default function ContactsPage() {
   const [contactBookings, setContactBookings] = useState<Booking[]>([]);
   const [contactMemberships, setContactMemberships] = useState<Membership[]>([]);
   const [contactDocuments, setContactDocuments] = useState<Document[]>([]);
+  const [contactEntityRoles, setContactEntityRoles] = useState<ContactEntityRole[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
 
   // Edit form state
@@ -154,15 +155,17 @@ export default function ContactsPage() {
   const fetchRelatedData = useCallback(async (contactId: string) => {
     setLoadingRelated(true);
     
-    const [bookingsRes, membershipsRes, docsRes] = await Promise.all([
+    const [bookingsRes, membershipsRes, docsRes, rolesRes] = await Promise.all([
       supabase.from("bookings").select("*").eq("contact_id", contactId).order("date", { ascending: false }),
       supabase.from("memberships").select("*").eq("contact_id", contactId).order("start_date", { ascending: false }),
-      supabase.from("documents").select("*").eq("contact_id", contactId).order("uploaded_at", { ascending: false })
+      supabase.from("documents").select("*").eq("contact_id", contactId).order("uploaded_at", { ascending: false }),
+      supabase.from("contact_entity_roles").select("*, entities(id, name, entity_type)").eq("contact_id", contactId).order("created_at")
     ]);
 
     setContactBookings(bookingsRes.data ?? []);
     setContactMemberships(membershipsRes.data ?? []);
     setContactDocuments(docsRes.data ?? []);
+    setContactEntityRoles((rolesRes.data as ContactEntityRole[]) ?? []);
     setLoadingRelated(false);
   }, []);
 
@@ -562,6 +565,7 @@ export default function ContactsPage() {
               <Button variant={activeTab === "bookings" ? "default" : "ghost"} size="sm" onClick={() => setActiveTab("bookings")}>Bookings</Button>
               <Button variant={activeTab === "memberships" ? "default" : "ghost"} size="sm" onClick={() => setActiveTab("memberships")}>Memberships</Button>
               <Button variant={activeTab === "documents" ? "default" : "ghost"} size="sm" onClick={() => setActiveTab("documents")}>Documents</Button>
+              <Button variant={activeTab === "relationships" ? "default" : "ghost"} size="sm" onClick={() => setActiveTab("relationships")}>Relationships</Button>
             </div>
           </div>
 
@@ -719,6 +723,37 @@ export default function ContactsPage() {
                       <Button variant="outline" size="sm" onClick={() => handleDownload(d)}>View/Download</Button>
                     </div>
                   ))}</div>
+                )}
+              </div>
+            )}
+
+            {activeTab === "relationships" && (
+              <div className="space-y-4">
+                {loadingRelated ? <p>Loading...</p> : contactEntityRoles.length === 0 ? (
+                  <p className="text-muted-foreground italic">No relationships found. Associate this contact with entities from the Relationships page.</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Entity</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Role</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {contactEntityRoles.map(r => (
+                        <TableRow key={r.id}>
+                          <TableCell className="font-medium">{r.entities?.name ?? "Unknown"}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">
+                              {r.entities?.entity_type === "household" ? "Household" : r.entities?.entity_type === "school" ? "School" : r.entities?.entity_type === "organization" ? "Organization" : r.entities?.entity_type ?? "—"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell><Badge variant="outline">{r.role}</Badge></TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 )}
               </div>
             )}

@@ -50,3 +50,36 @@ export interface DocumentFile {
   path: string;
   contactId: string;
 }
+
+export interface Entity {
+  id: string;
+  name: string;
+  entity_type: 'household' | 'school' | 'organization';
+  description: string | null;
+  website: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  metadata: Record<string, unknown> | null;
+  created_at?: string;
+  contact_entity_roles?: { count: number }[];
+}
+
+export interface RelationshipType {
+  id: string;
+  entity_type: string;
+  name: string;
+  is_default: boolean;
+  created_at?: string;
+}
+
+export interface ContactEntityRole {
+  id: string;
+  contact_id: string;
+  entity_id: string;
+  role: string;
+  notes: string | null;
+  created_at?: string;
+  contacts?: { id: string; name: string | null; email: string | null } | null;
+  entities?: { id: string; name: string | null; entity_type: string } | null;
+}

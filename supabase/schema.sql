@@ -50,3 +50,51 @@ create table memberships (
   code text,
   status text
 );
+
+-- entities (households, schools, organizations)
+create table entities (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  entity_type text not null, -- 'household', 'school', 'organization'
+  description text,
+  website text,
+  phone text,
+  email text,
+  address text,
+  metadata jsonb,
+  created_at timestamp default now()
+);
+
+-- predefined + user-created relationship types per entity type
+create table relationship_types (
+  id uuid primary key default gen_random_uuid(),
+  entity_type text not null,
+  name text not null,
+  is_default boolean default false,
+  created_at timestamp default now(),
+  unique(entity_type, name)
+);
+
+-- contact-to-entity associations with role
+create table contact_entity_roles (
+  id uuid primary key default gen_random_uuid(),
+  contact_id uuid references contacts(id) on delete cascade,
+  entity_id uuid references entities(id) on delete cascade,
+  role text not null,
+  notes text,
+  created_at timestamp default now(),
+  unique(contact_id, entity_id, role)
+);
+
+-- seed default relationship types
+insert into relationship_types (entity_type, name, is_default) values
+  ('household', 'Member', true),
+  ('household', 'Mother', false),
+  ('household', 'Father', false),
+  ('household', 'Child', false),
+  ('household', 'Guardian', false),
+  ('school', 'Member', true),
+  ('school', 'Teacher', false),
+  ('school', 'Parent', false),
+  ('school', 'Administrator', false),
+  ('organization', 'Member', true);
