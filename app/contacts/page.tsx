@@ -162,12 +162,6 @@ export default function ContactsPage() {
     fetchContacts();
   }, [fetchContacts]);
 
-  useEffect(() => {
-    if (activeTab === "relationships" && allEntities.length === 0) {
-      fetchAllEntities();
-    }
-  }, [activeTab, allEntities.length, fetchAllEntities]);
-
   const fetchRelatedData = useCallback(async (contactId: string) => {
     setLoadingRelated(true);
     
@@ -189,6 +183,12 @@ export default function ContactsPage() {
     const { data } = await supabase.from("entities").select("*").order("name");
     setAllEntities((data as Entity[]) ?? []);
   }, []);
+
+  useEffect(() => {
+    if (activeTab === "relationships" && allEntities.length === 0) {
+      fetchAllEntities();
+    }
+  }, [activeTab, allEntities.length, fetchAllEntities]);
 
   const fetchRelTypesForEntity = useCallback(async (entityType: string) => {
     const { data } = await supabase
