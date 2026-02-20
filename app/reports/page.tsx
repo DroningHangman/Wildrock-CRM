@@ -86,6 +86,15 @@ export default function ReportsPage() {
     ? !!BOOKING_SOURCE_MAP[selectedType.slug]
     : false;
 
+  // For booking-sourced types, exclude boolean fields since they don't aggregate
+  const displayFields = useMemo(() => {
+    if (!schema) return [];
+    if (isBookingSourced) {
+      return schema.fields.filter((f) => f.type !== "boolean");
+    }
+    return schema.fields;
+  }, [schema, isBookingSourced]);
+
   /* ── Fetch ── */
 
   const fetchProgramTypes = useCallback(async () => {
@@ -511,8 +520,8 @@ export default function ReportsPage() {
         {aggregations && Object.keys(aggregations).length > 0 && (
           <div className="px-6 pb-4">
             <div className="rounded-lg border bg-muted/30 p-4 flex flex-wrap gap-6">
-              {schema?.fields
-                .filter((f) => schema.aggregations?.includes(f.key))
+              {displayFields
+                .filter((f) => schema?.aggregations?.includes(f.key))
                 .map((f) => (
                   <div key={f.key}>
                     <p className="text-xs text-muted-foreground">{f.label}</p>
@@ -547,7 +556,7 @@ export default function ReportsPage() {
                   {schema.show_entity && !isBookingSourced && (
                     <TableHead>Entity</TableHead>
                   )}
-                  {schema.fields.map((f) => (
+                  {displayFields.map((f) => (
                     <TableHead key={f.key}>{f.label}</TableHead>
                   ))}
                   {!isBookingSourced && <TableHead>Notes</TableHead>}
@@ -568,7 +577,7 @@ export default function ReportsPage() {
                         {entry.entities?.name ?? "—"}
                       </TableCell>
                     )}
-                    {schema.fields.map((f) => (
+                    {displayFields.map((f) => (
                       <TableCell key={f.key}>
                         {renderCellValue(f, entry.data[f.key])}
                       </TableCell>
@@ -605,7 +614,7 @@ export default function ReportsPage() {
                   <TableRow>
                     <TableCell
                       colSpan={
-                        schema.fields.length +
+                        displayFields.length +
                         2 +
                         (schema.show_contact ? 1 : 0) +
                         (schema.show_entity && !isBookingSourced ? 1 : 0) +
@@ -752,7 +761,7 @@ export default function ReportsPage() {
             )}
 
             {/* Dynamic fields */}
-            {schema?.fields.map((field) => (
+            {displayFields.map((field) => (
               <div key={field.key} className="space-y-2">
                 <Label>{field.label}</Label>
                 {renderFieldInput(field)}
