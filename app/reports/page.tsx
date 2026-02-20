@@ -215,6 +215,47 @@ export default function ReportsPage() {
     setAllEntities((entitiesRes.data as Entity[]) ?? []);
   }, []);
 
+  /* ── Daily aggregation for booking-sourced types ── */
+
+  interface AggregatedRow {
+    date: string;
+    bookingCount: number;
+    data: Record<string, number>;
+    contactNames: string[];
+  }
+
+  const dailyRows = useMemo((): AggregatedRow[] => {
+    if (!isBookingSourced) return [];
+
+    const grouped = new Map<string, AggregatedRow>();
+    for (const entry of entries) {
+      const existing = grouped.get(entry.date);
+      if (existing) {
+        existing.bookingCount++;
+        for (const field of displayFields) {
+          existing.data[field.key] =
+            (existing.data[field.key] || 0) + (Number(entry.data[field.key]) || 0);
+        }
+        if (entry.contacts?.name) {
+          existing.contactNames.push(entry.contacts.name);
+        }
+      } else {
+        const data: Record<string, number> = {};
+        for (const field of displayFields) {
+          data[field.key] = Number(entry.data[field.key]) || 0;
+        }
+        grouped.set(entry.date, {
+          date: entry.date,
+          bookingCount: 1,
+          data,
+          contactNames: entry.contacts?.name ? [entry.contacts.name] : [],
+        });
+      }
+    }
+
+    return Array.from(grouped.values());
+  }, [entries, isBookingSourced, displayFields]);
+
   /* ── Aggregations ── */
 
   const aggregations = useMemo(() => {
@@ -510,8 +551,7 @@ export default function ReportsPage() {
         {isBookingSourced && (
           <div className="px-6 pb-2">
             <p className="text-sm text-muted-foreground">
-              Sourced from Cal.com bookings. Use the edit button to add tracking
-              details.
+              Aggregated daily from Cal.com bookings.
             </p>
           </div>
         )}
@@ -533,7 +573,9 @@ export default function ReportsPage() {
                   </div>
                 ))}
               <div>
-                <p className="text-xs text-muted-foreground">Entries</p>
+                <p className="text-xs text-muted-foreground">
+                  {isBookingSourced ? "Bookings" : "Entries"}
+                </p>
                 <p className="text-xl font-semibold">{entries.length}</p>
               </div>
             </div>
@@ -552,72 +594,103 @@ export default function ReportsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Date</TableHead>
-                  {schema.show_contact && <TableHead>Contact</TableHead>}
-                  {schema.show_entity && !isBookingSourced && (
+                  {isBookingSourced && <TableHead>Bookings</TableHead>}
+                  {!isBookingSourced && schema.show_contact && (
+                    <TableHead>Contact</TableHead>
+                  )}
+                  {!isBookingSourced && schema.show_entity && (
                     <TableHead>Entity</TableHead>
                   )}
                   {displayFields.map((f) => (
                     <TableHead key={f.key}>{f.label}</TableHead>
                   ))}
                   {!isBookingSourced && <TableHead>Notes</TableHead>}
-                  <TableHead className="w-[100px]"></TableHead>
+                  {!isBookingSourced && (
+                    <TableHead className="w-[100px]"></TableHead>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {entries.map((entry) => (
-                  <TableRow key={entry.id}>
-                    <TableCell className="font-medium">{entry.date}</TableCell>
-                    {schema.show_contact && (
-                      <TableCell>
-                        {entry.contacts?.name ?? "—"}
-                      </TableCell>
-                    )}
-                    {schema.show_entity && !isBookingSourced && (
-                      <TableCell>
-                        {entry.entities?.name ?? "—"}
-                      </TableCell>
-                    )}
-                    {displayFields.map((f) => (
-                      <TableCell key={f.key}>
-                        {renderCellValue(f, entry.data[f.key])}
-                      </TableCell>
-                    ))}
-                    {!isBookingSourced && (
-                      <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
-                        {entry.notes ?? "—"}
-                      </TableCell>
-                    )}
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEditForm(entry)}
-                        >
-                          Edit
-                        </Button>
-                        {!isBookingSourced && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => deleteEntry(entry.id)}
-                          >
-                            Delete
-                          </Button>
+                {isBookingSourced
+                  ? dailyRows.map((row) => (
+                      <TableRow key={row.date}>
+                        <TableCell className="font-medium">
+                          {row.date}
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-muted-foreground">
+                            {row.bookingCount}
+                          </span>
+                          {row.contactNames.length > 0 && (
+                            <span
+                              className="ml-2 text-xs text-muted-foreground"
+                              title={row.contactNames.join(", ")}
+                            >
+                              ({row.contactNames.join(", ")})
+                            </span>
+                          )}
+                        </TableCell>
+                        {displayFields.map((f) => (
+                          <TableCell key={f.key}>
+                            {renderCellValue(f, row.data[f.key])}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  : entries.map((entry) => (
+                      <TableRow key={entry.id}>
+                        <TableCell className="font-medium">
+                          {entry.date}
+                        </TableCell>
+                        {schema.show_contact && (
+                          <TableCell>
+                            {entry.contacts?.name ?? "—"}
+                          </TableCell>
                         )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {entries.length === 0 && (
+                        {schema.show_entity && (
+                          <TableCell>
+                            {entry.entities?.name ?? "—"}
+                          </TableCell>
+                        )}
+                        {displayFields.map((f) => (
+                          <TableCell key={f.key}>
+                            {renderCellValue(f, entry.data[f.key])}
+                          </TableCell>
+                        ))}
+                        <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
+                          {entry.notes ?? "—"}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEditForm(entry)}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => deleteEntry(entry.id)}
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                {(isBookingSourced
+                  ? dailyRows.length === 0
+                  : entries.length === 0) && (
                   <TableRow>
                     <TableCell
                       colSpan={
                         displayFields.length +
                         2 +
-                        (schema.show_contact ? 1 : 0) +
-                        (schema.show_entity && !isBookingSourced ? 1 : 0) +
+                        (!isBookingSourced && schema.show_contact ? 1 : 0) +
+                        (!isBookingSourced && schema.show_entity ? 1 : 0) +
                         (!isBookingSourced ? 1 : 0)
                       }
                       className="text-center text-muted-foreground py-8"
