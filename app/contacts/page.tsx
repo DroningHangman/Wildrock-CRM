@@ -23,9 +23,7 @@ import {
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -52,7 +50,8 @@ export default function ContactsPage() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [participationProgram, setParticipationProgram] = useState<string>("none");
   const [participationMin, setParticipationMin] = useState<string>("1");
-  const [entityFilter, setEntityFilter] = useState<string>("all");
+  const [entityTypeFilter, setEntityTypeFilter] = useState<string>("all");
+  const [entityIdFilter, setEntityIdFilter] = useState<string>("all");
   const [entityFilterContactIds, setEntityFilterContactIds] = useState<string[] | null>(null);
   
   // 360 View State
@@ -193,18 +192,33 @@ export default function ContactsPage() {
   }, [fetchAllEntities]);
 
   useEffect(() => {
-    if (entityFilter === "all") {
+    if (entityTypeFilter === "all") {
       setEntityFilterContactIds(null);
       return;
     }
     (async () => {
-      const { data } = await supabase
-        .from("contact_entity_roles")
-        .select("contact_id")
-        .eq("entity_id", entityFilter);
-      setEntityFilterContactIds((data ?? []).map((r) => r.contact_id));
+      if (entityIdFilter !== "all") {
+        const { data } = await supabase
+          .from("contact_entity_roles")
+          .select("contact_id")
+          .eq("entity_id", entityIdFilter);
+        setEntityFilterContactIds((data ?? []).map((r) => r.contact_id));
+      } else {
+        const entityIds = allEntities
+          .filter((e) => e.entity_type === entityTypeFilter)
+          .map((e) => e.id);
+        if (entityIds.length === 0) {
+          setEntityFilterContactIds([]);
+          return;
+        }
+        const { data } = await supabase
+          .from("contact_entity_roles")
+          .select("contact_id")
+          .in("entity_id", entityIds);
+        setEntityFilterContactIds((data ?? []).map((r) => r.contact_id));
+      }
     })();
-  }, [entityFilter]);
+  }, [entityTypeFilter, entityIdFilter, allEntities]);
 
   const fetchRelTypesForEntity = useCallback(async (entityType: string) => {
     const { data } = await supabase
@@ -489,31 +503,40 @@ export default function ContactsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="w-[220px]">
-              <Label>Entity</Label>
-              <Select value={entityFilter} onValueChange={setEntityFilter}>
+            <div className="w-[180px]">
+              <Label>Entity type</Label>
+              <Select value={entityTypeFilter} onValueChange={(val) => { setEntityTypeFilter(val); setEntityIdFilter("all"); }}>
                 <SelectTrigger className="mt-1">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All</SelectItem>
-                  {(["household", "school", "organization"] as const).map((type) => {
-                    const typeEntities = allEntities.filter((e) => e.entity_type === type);
-                    if (typeEntities.length === 0) return null;
-                    return (
-                      <SelectGroup key={type}>
-                        <SelectLabel>
-                          {type === "household" ? "Households" : type === "school" ? "Schools" : "Organizations"}
-                        </SelectLabel>
-                        {typeEntities.map((e) => (
-                          <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
-                        ))}
-                      </SelectGroup>
-                    );
-                  })}
+                  <SelectItem value="household">Household</SelectItem>
+                  <SelectItem value="school">School</SelectItem>
+                  <SelectItem value="organization">Organization</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            {entityTypeFilter !== "all" && (
+              <div className="w-[200px]">
+                <Label>Entity</Label>
+                <Select value={entityIdFilter} onValueChange={setEntityIdFilter}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">
+                      All {entityTypeFilter === "household" ? "Households" : entityTypeFilter === "school" ? "Schools" : "Organizations"}
+                    </SelectItem>
+                    {allEntities
+                      .filter((e) => e.entity_type === entityTypeFilter)
+                      .map((e) => (
+                        <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="w-[200px]">
               <Label>Event participation</Label>
               <Select value={participationProgram} onValueChange={setParticipationProgram}>
