@@ -26,7 +26,8 @@ create table bookings (
   program_name text,
   kids_count int,
   notes text,
-  form_responses jsonb -- Stores dynamic form answers (allergies, emergency contact, etc.) per event type
+  form_responses jsonb, -- Stores dynamic form answers (allergies, emergency contact, etc.) per event type
+  report_data jsonb default '{}' -- Manual enrichment data entered via Reports (owes, paid, etc.)
 );
 
 -- documents (metadata; actual files in storage bucket "documents")

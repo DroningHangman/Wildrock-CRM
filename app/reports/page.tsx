@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import type {
   Contact,
   Entity,
+  Booking,
   ProgramType,
   ProgramEntry,
   FieldDefinition,
@@ -39,6 +40,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+// Maps program_types.slug → bookings.program_name for booking-sourced reports
+const BOOKING_SOURCE_MAP: Record<string, string> = {
+  "birthday-party": "birthday-party",
+  "field-trip": "wildrock-field-trip",
+};
+
+// Maps schema field keys → booking column extractors for auto-population
+const BOOKING_FIELD_DEFAULTS: Record<string, (b: Booking) => unknown> = {
+  children_count: (b) => b.kids_count ?? 0,
+};
+
 export default function ReportsPage() {
   const [programTypes, setProgramTypes] = useState<ProgramType[]>([]);
   const [selectedTypeId, setSelectedTypeId] = useState<string>("");
@@ -70,6 +82,9 @@ export default function ReportsPage() {
 
   const selectedType = programTypes.find((t) => t.id === selectedTypeId);
   const schema: FieldSchema | null = selectedType?.field_schema ?? null;
+  const isBookingSourced = selectedType
+    ? !!BOOKING_SOURCE_MAP[selectedType.slug]
+    : false;
 
   /* ── Fetch ── */
 
@@ -95,24 +110,81 @@ export default function ReportsPage() {
     if (!selectedTypeId) return;
     setLoadingEntries(true);
 
-    let query = supabase
-      .from("program_entries")
-      .select("*, contacts(id, name), entities(id, name)")
-      .eq("program_type_id", selectedTypeId)
-      .order("date", { ascending: false });
+    const type = programTypes.find((t) => t.id === selectedTypeId);
+    const bookingProgramName = type
+      ? BOOKING_SOURCE_MAP[type.slug]
+      : undefined;
+    const fieldSchema: FieldSchema | null = type?.field_schema ?? null;
 
-    if (dateFrom) query = query.gte("date", dateFrom);
-    if (dateTo) query = query.lte("date", dateTo);
+    if (bookingProgramName) {
+      let query = supabase
+        .from("bookings")
+        .select("*, contacts(id, name)")
+        .eq("program_name", bookingProgramName)
+        .order("date", { ascending: false });
 
-    const { data, error } = await query;
-    if (error) {
-      console.error("Error fetching entries:", error);
-      setEntries([]);
+      if (dateFrom) query = query.gte("date", dateFrom);
+      if (dateTo) query = query.lte("date", dateTo);
+
+      const { data, error } = await query;
+      if (error) {
+        console.error("Error fetching bookings for report:", error);
+        setEntries([]);
+      } else {
+        const transformed: ProgramEntry[] = ((data as Booking[]) || []).map(
+          (booking) => {
+            const rd = (booking.report_data || {}) as Record<string, unknown>;
+            const entryData: Record<string, unknown> = {};
+
+            for (const field of fieldSchema?.fields || []) {
+              if (rd[field.key] !== undefined) {
+                entryData[field.key] = rd[field.key];
+              } else {
+                const defaultFn = BOOKING_FIELD_DEFAULTS[field.key];
+                if (defaultFn) {
+                  entryData[field.key] = defaultFn(booking);
+                }
+              }
+            }
+
+            return {
+              id: booking.id,
+              program_type_id: selectedTypeId,
+              date: booking.date ?? "",
+              contact_id: booking.contact_id,
+              entity_id: null,
+              data: entryData,
+              notes: booking.notes,
+              contacts: booking.contacts
+                ? { id: booking.contacts.id, name: booking.contacts.name }
+                : null,
+              entities: null,
+            };
+          }
+        );
+        setEntries(transformed);
+      }
     } else {
-      setEntries((data as ProgramEntry[]) ?? []);
+      let query = supabase
+        .from("program_entries")
+        .select("*, contacts(id, name), entities(id, name)")
+        .eq("program_type_id", selectedTypeId)
+        .order("date", { ascending: false });
+
+      if (dateFrom) query = query.gte("date", dateFrom);
+      if (dateTo) query = query.lte("date", dateTo);
+
+      const { data, error } = await query;
+      if (error) {
+        console.error("Error fetching entries:", error);
+        setEntries([]);
+      } else {
+        setEntries((data as ProgramEntry[]) ?? []);
+      }
     }
+
     setLoadingEntries(false);
-  }, [selectedTypeId, dateFrom, dateTo]);
+  }, [selectedTypeId, programTypes, dateFrom, dateTo]);
 
   useEffect(() => {
     fetchProgramTypes();
@@ -124,7 +196,10 @@ export default function ReportsPage() {
 
   const fetchLookupData = useCallback(async () => {
     const [contactsRes, entitiesRes] = await Promise.all([
-      supabase.from("contacts").select("*").order("name", { nullsFirst: false }),
+      supabase
+        .from("contacts")
+        .select("*")
+        .order("name", { nullsFirst: false }),
       supabase.from("entities").select("*").order("name"),
     ]);
     setAllContacts((contactsRes.data as Contact[]) ?? []);
@@ -167,17 +242,37 @@ export default function ReportsPage() {
     setFormDate(entry.date);
     setFormData({ ...entry.data });
     setFormNotes(entry.notes ?? "");
-    setFormContactId(entry.contact_id ?? "");
-    setFormContactSearch(entry.contacts?.name ?? "");
-    setFormEntityId(entry.entity_id ?? "");
-    setFormEntitySearch(entry.entities?.name ?? "");
-    setIsFormOpen(true);
-    if (schema?.show_contact || schema?.show_entity) {
-      fetchLookupData();
+    if (!isBookingSourced) {
+      setFormContactId(entry.contact_id ?? "");
+      setFormContactSearch(entry.contacts?.name ?? "");
+      setFormEntityId(entry.entity_id ?? "");
+      setFormEntitySearch(entry.entities?.name ?? "");
+      if (schema?.show_contact || schema?.show_entity) {
+        fetchLookupData();
+      }
     }
+    setIsFormOpen(true);
   }
 
   async function saveEntry() {
+    if (isBookingSourced) {
+      if (!editingEntryId) return;
+      setSaving(true);
+      const { error } = await supabase
+        .from("bookings")
+        .update({ report_data: formData })
+        .eq("id", editingEntryId);
+      if (error) {
+        alert("Failed to update entry");
+        setSaving(false);
+        return;
+      }
+      setSaving(false);
+      setIsFormOpen(false);
+      fetchEntries();
+      return;
+    }
+
     if (!selectedTypeId || !formDate) {
       alert("Date is required");
       return;
@@ -292,7 +387,9 @@ export default function ReportsPage() {
     switch (field.type) {
       case "boolean":
         return value === true ? (
-          <Badge variant="default" className="bg-green-600">Yes</Badge>
+          <Badge variant="default" className="bg-green-600">
+            Yes
+          </Badge>
         ) : (
           <Badge variant="secondary">No</Badge>
         );
@@ -340,7 +437,7 @@ export default function ReportsPage() {
             Program tracking and analytics.
           </p>
         </div>
-        {selectedType && (
+        {selectedType && !isBookingSourced && (
           <Button onClick={openAddForm}>Add Entry</Button>
         )}
       </div>
@@ -400,6 +497,16 @@ export default function ReportsPage() {
           </div>
         </CardHeader>
 
+        {/* Booking source indicator */}
+        {isBookingSourced && (
+          <div className="px-6 pb-2">
+            <p className="text-sm text-muted-foreground">
+              Sourced from Cal.com bookings. Use the edit button to add tracking
+              details.
+            </p>
+          </div>
+        )}
+
         {/* Aggregation bar */}
         {aggregations && Object.keys(aggregations).length > 0 && (
           <div className="px-6 pb-4">
@@ -437,11 +544,13 @@ export default function ReportsPage() {
                 <TableRow>
                   <TableHead>Date</TableHead>
                   {schema.show_contact && <TableHead>Contact</TableHead>}
-                  {schema.show_entity && <TableHead>Entity</TableHead>}
+                  {schema.show_entity && !isBookingSourced && (
+                    <TableHead>Entity</TableHead>
+                  )}
                   {schema.fields.map((f) => (
                     <TableHead key={f.key}>{f.label}</TableHead>
                   ))}
-                  <TableHead>Notes</TableHead>
+                  {!isBookingSourced && <TableHead>Notes</TableHead>}
                   <TableHead className="w-[100px]"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -454,7 +563,7 @@ export default function ReportsPage() {
                         {entry.contacts?.name ?? "—"}
                       </TableCell>
                     )}
-                    {schema.show_entity && (
+                    {schema.show_entity && !isBookingSourced && (
                       <TableCell>
                         {entry.entities?.name ?? "—"}
                       </TableCell>
@@ -464,9 +573,11 @@ export default function ReportsPage() {
                         {renderCellValue(f, entry.data[f.key])}
                       </TableCell>
                     ))}
-                    <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
-                      {entry.notes ?? "—"}
-                    </TableCell>
+                    {!isBookingSourced && (
+                      <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
+                        {entry.notes ?? "—"}
+                      </TableCell>
+                    )}
                     <TableCell>
                       <div className="flex gap-1">
                         <Button
@@ -476,14 +587,16 @@ export default function ReportsPage() {
                         >
                           Edit
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => deleteEntry(entry.id)}
-                        >
-                          Delete
-                        </Button>
+                        {!isBookingSourced && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => deleteEntry(entry.id)}
+                          >
+                            Delete
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -493,13 +606,16 @@ export default function ReportsPage() {
                     <TableCell
                       colSpan={
                         schema.fields.length +
-                        3 +
+                        2 +
                         (schema.show_contact ? 1 : 0) +
-                        (schema.show_entity ? 1 : 0)
+                        (schema.show_entity && !isBookingSourced ? 1 : 0) +
+                        (!isBookingSourced ? 1 : 0)
                       }
                       className="text-center text-muted-foreground py-8"
                     >
-                      No entries yet. Click &quot;Add Entry&quot; to get started.
+                      {isBookingSourced
+                        ? "No bookings found. Bookings sync automatically from Cal.com."
+                        : "No entries yet. Click \"Add Entry\" to get started."}
                     </TableCell>
                   </TableRow>
                 )}
@@ -514,22 +630,26 @@ export default function ReportsPage() {
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingEntryId ? "Edit" : "Add"} {selectedType?.name} Entry
+              {isBookingSourced
+                ? `Update ${selectedType?.name} Details`
+                : `${editingEntryId ? "Edit" : "Add"} ${selectedType?.name} Entry`}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            {/* Date */}
-            <div className="space-y-2">
-              <Label>Date *</Label>
-              <Input
-                type="date"
-                value={formDate}
-                onChange={(e) => setFormDate(e.target.value)}
-              />
-            </div>
+            {/* Date (non-booking only) */}
+            {!isBookingSourced && (
+              <div className="space-y-2">
+                <Label>Date *</Label>
+                <Input
+                  type="date"
+                  value={formDate}
+                  onChange={(e) => setFormDate(e.target.value)}
+                />
+              </div>
+            )}
 
-            {/* Contact picker */}
-            {schema?.show_contact && (
+            {/* Contact picker (non-booking only) */}
+            {!isBookingSourced && schema?.show_contact && (
               <div className="space-y-2">
                 <Label>Contact</Label>
                 <div className="relative">
@@ -578,8 +698,8 @@ export default function ReportsPage() {
               </div>
             )}
 
-            {/* Entity picker */}
-            {schema?.show_entity && (
+            {/* Entity picker (non-booking only) */}
+            {!isBookingSourced && schema?.show_entity && (
               <div className="space-y-2">
                 <Label>School / Organization</Label>
                 <div className="relative">
@@ -619,8 +739,8 @@ export default function ReportsPage() {
                               {e.entity_type === "household"
                                 ? "Household"
                                 : e.entity_type === "school"
-                                ? "School"
-                                : "Organization"}
+                                  ? "School"
+                                  : "Organization"}
                             </Badge>
                           </div>
                         ))
@@ -639,22 +759,28 @@ export default function ReportsPage() {
               </div>
             ))}
 
-            {/* Notes */}
-            <div className="space-y-2">
-              <Label>Notes</Label>
-              <Input
-                value={formNotes}
-                onChange={(e) => setFormNotes(e.target.value)}
-                placeholder="Optional notes"
-              />
-            </div>
+            {/* Notes (non-booking only) */}
+            {!isBookingSourced && (
+              <div className="space-y-2">
+                <Label>Notes</Label>
+                <Input
+                  value={formNotes}
+                  onChange={(e) => setFormNotes(e.target.value)}
+                  placeholder="Optional notes"
+                />
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsFormOpen(false)}>
               Cancel
             </Button>
             <Button onClick={saveEntry} disabled={saving}>
-              {editingEntryId ? "Save Changes" : "Add Entry"}
+              {isBookingSourced
+                ? "Save Details"
+                : editingEntryId
+                  ? "Save Changes"
+                  : "Add Entry"}
             </Button>
           </DialogFooter>
         </DialogContent>

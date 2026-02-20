@@ -22,6 +22,7 @@ export interface Booking {
   kids_count: number | null;
   notes: string | null;
   form_responses?: Record<string, unknown> | null; // JSONB field for dynamic form answers
+  report_data?: Record<string, unknown> | null; // Manual enrichment data from Reports tab
   contacts?: Contact | null;
 }
 
