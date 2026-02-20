@@ -626,7 +626,9 @@ export default function ReportsPage() {
                               className="ml-2 text-xs text-muted-foreground"
                               title={row.contactNames.join(", ")}
                             >
-                              ({row.contactNames.join(", ")})
+                              ({row.contactNames.length <= 3
+                                ? row.contactNames.join(", ")
+                                : `${row.contactNames.slice(0, 2).join(", ")} +${row.contactNames.length - 2} more`})
                             </span>
                           )}
                         </TableCell>
