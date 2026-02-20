@@ -69,6 +69,42 @@ export interface RelationshipType {
   created_at?: string;
 }
 
+export interface FieldDefinition {
+  key: string;
+  label: string;
+  type: 'text' | 'number' | 'boolean' | 'currency';
+  default?: string | number | boolean;
+}
+
+export interface FieldSchema {
+  fields: FieldDefinition[];
+  aggregations?: string[];
+  show_contact: boolean;
+  show_entity: boolean;
+}
+
+export interface ProgramType {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  field_schema: FieldSchema;
+  created_at?: string;
+}
+
+export interface ProgramEntry {
+  id: string;
+  program_type_id: string;
+  date: string;
+  contact_id: string | null;
+  entity_id: string | null;
+  data: Record<string, unknown>;
+  notes: string | null;
+  created_at?: string;
+  contacts?: { id: string; name: string | null } | null;
+  entities?: { id: string; name: string | null } | null;
+}
+
 export interface ContactEntityRole {
   id: string;
   contact_id: string;
