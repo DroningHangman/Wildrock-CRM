@@ -23,7 +23,9 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -50,6 +52,8 @@ export default function ContactsPage() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [participationProgram, setParticipationProgram] = useState<string>("none");
   const [participationMin, setParticipationMin] = useState<string>("1");
+  const [entityFilter, setEntityFilter] = useState<string>("all");
+  const [entityFilterContactIds, setEntityFilterContactIds] = useState<string[] | null>(null);
   
   // 360 View State
   const [activeTab, setActiveTab] = useState<ViewTab>("profile");
@@ -185,10 +189,22 @@ export default function ContactsPage() {
   }, []);
 
   useEffect(() => {
-    if (activeTab === "relationships" && allEntities.length === 0) {
-      fetchAllEntities();
+    fetchAllEntities();
+  }, [fetchAllEntities]);
+
+  useEffect(() => {
+    if (entityFilter === "all") {
+      setEntityFilterContactIds(null);
+      return;
     }
-  }, [activeTab, allEntities.length, fetchAllEntities]);
+    (async () => {
+      const { data } = await supabase
+        .from("contact_entity_roles")
+        .select("contact_id")
+        .eq("entity_id", entityFilter);
+      setEntityFilterContactIds((data ?? []).map((r) => r.contact_id));
+    })();
+  }, [entityFilter]);
 
   const fetchRelTypesForEntity = useCallback(async (entityType: string) => {
     const { data } = await supabase
@@ -296,7 +312,9 @@ export default function ContactsPage() {
     const matchType =
       typeFilter === "all" ||
       (c.contact_types ?? []).includes(typeFilter);
-    return matchSearch && matchType;
+    const matchEntity =
+      !entityFilterContactIds || entityFilterContactIds.includes(c.id);
+    return matchSearch && matchType && matchEntity;
   });
 
   async function saveContactEdits() {
@@ -468,6 +486,31 @@ export default function ContactsPage() {
                   {contactTypeOptions.map((t) => (
                     <SelectItem key={t} value={t}>{t}</SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-[220px]">
+              <Label>Entity</Label>
+              <Select value={entityFilter} onValueChange={setEntityFilter}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  {(["household", "school", "organization"] as const).map((type) => {
+                    const typeEntities = allEntities.filter((e) => e.entity_type === type);
+                    if (typeEntities.length === 0) return null;
+                    return (
+                      <SelectGroup key={type}>
+                        <SelectLabel>
+                          {type === "household" ? "Households" : type === "school" ? "Schools" : "Organizations"}
+                        </SelectLabel>
+                        {typeEntities.map((e) => (
+                          <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
+                        ))}
+                      </SelectGroup>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
