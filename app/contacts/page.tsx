@@ -864,6 +864,26 @@ export default function ContactsPage() {
                     <Textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} className="min-h-[100px]" />
                   </div>
                 </div>
+                <div className="col-span-full space-y-3 border-t pt-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-semibold">Relationships</Label>
+                    <Button variant="ghost" size="sm" onClick={() => setActiveTab("relationships")}>
+                      Manage
+                    </Button>
+                  </div>
+                  {contactEntityRoles.length === 0 ? (
+                    <p className="text-sm text-muted-foreground italic">No relationships yet.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {contactEntityRoles.map((r) => (
+                        <div key={r.id} className="flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm">
+                          <span className="font-medium">{r.entities?.name ?? "Unknown"}</span>
+                          <Badge variant="outline" className="text-[10px]">{r.role}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
