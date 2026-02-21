@@ -172,7 +172,7 @@ export default function DocumentsPage() {
         <CardHeader>
           <CardTitle>Documents by contact</CardTitle>
           <CardDescription>Choose a contact to view or upload documents.</CardDescription>
-          <div className="w-full max-w-xs pt-2">
+          <div className="w-full sm:max-w-xs pt-2">
             <Label>Contact</Label>
             <Select value={selectedId || undefined} onValueChange={setSelectedId}>
               <SelectTrigger className="mt-1">
@@ -206,7 +206,7 @@ export default function DocumentsPage() {
         <CardContent className="space-y-4">
           {selectedId && (
             <>
-              <div className="flex flex-wrap items-end gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-end gap-2">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -214,7 +214,7 @@ export default function DocumentsPage() {
                   className="hidden"
                   onChange={handleUpload}
                 />
-                <div className="w-[180px]">
+                <div className="sm:w-[180px]">
                   <Label>Document type</Label>
                   <Select value={uploadType} onValueChange={setUploadType}>
                     <SelectTrigger className="mt-1">
@@ -230,6 +230,7 @@ export default function DocumentsPage() {
                   </Select>
                 </div>
                 <Button
+                  className="w-full sm:w-auto"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
                 >
@@ -247,20 +248,21 @@ export default function DocumentsPage() {
                   {docs.map((d) => (
                     <li
                       key={d.id}
-                      className="flex items-center justify-between rounded-md border px-3 py-2"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between rounded-md border px-3 py-2 gap-2"
                     >
-                      <div>
-                        <span className="text-sm font-medium">{d.name ?? "—"}</span>
+                      <div className="min-w-0">
+                        <span className="text-sm font-medium break-all">{d.name ?? "—"}</span>
                         {d.type && (
                           <span className="ml-2 text-xs text-muted-foreground">
                             {d.type}
                           </span>
                         )}
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 shrink-0">
                         <Button
                           variant="outline"
                           size="sm"
+                          className="flex-1 sm:flex-none"
                           onClick={() => handleView(d)}
                         >
                           View
@@ -268,6 +270,7 @@ export default function DocumentsPage() {
                         <Button
                           variant="outline"
                           size="sm"
+                          className="flex-1 sm:flex-none"
                           onClick={() => handleDownload(d)}
                         >
                           Download

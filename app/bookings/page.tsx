@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import type { Booking, Contact } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
@@ -244,7 +245,7 @@ export default function BookingsPage() {
 
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-wrap gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
             <div>
               <Label htmlFor="dateFrom">Date from</Label>
               <Input
@@ -255,7 +256,7 @@ export default function BookingsPage() {
                   setDateFrom(e.target.value);
                   setActiveFilter("all");
                 }}
-                className="mt-1 w-[160px]"
+                className="mt-1"
               />
             </div>
             <div>
@@ -268,10 +269,10 @@ export default function BookingsPage() {
                   setDateTo(e.target.value);
                   setActiveFilter("all");
                 }}
-                className="mt-1 w-[160px]"
+                className="mt-1"
               />
             </div>
-            <div className="w-[200px]">
+            <div>
               <Label>Program</Label>
               <Select value={programFilter} onValueChange={setProgramFilter}>
                 <SelectTrigger className="mt-1">
@@ -287,7 +288,7 @@ export default function BookingsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="w-[200px]">
+            <div>
               <Label>Contact</Label>
               <Select value={contactFilter} onValueChange={setContactFilter}>
                 <SelectTrigger className="mt-1">
@@ -321,18 +322,18 @@ export default function BookingsPage() {
           </div>
 
           <div className="space-y-4 mb-6 border-t pt-4">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Date:</span>
-              <div className="flex gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-muted-foreground shrink-0">Date:</span>
+              <div className="flex flex-wrap gap-2">
                 <Button variant={activeFilter === "today" ? "default" : "outline"} size="sm" onClick={() => applyQuickFilter("today")}>Today</Button>
                 <Button variant={activeFilter === "week" ? "default" : "outline"} size="sm" onClick={() => applyQuickFilter("week")}>This Week</Button>
                 <Button variant={activeFilter === "month" ? "default" : "outline"} size="sm" onClick={() => applyQuickFilter("month")}>This Month</Button>
                 <Button variant={activeFilter === "all" && !dateFrom && !dateTo ? "default" : "outline"} size="sm" onClick={() => applyQuickFilter("all")}>Clear Dates</Button>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Program:</span>
-              <div className="flex gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-muted-foreground shrink-0">Program:</span>
+              <div className="flex flex-wrap gap-2">
                 {PROGRAM_QUICK_FILTERS.map(({ label, value }) => (
                   <Button
                     key={value}
@@ -350,32 +351,62 @@ export default function BookingsPage() {
           {loading ? (
             <p className="text-muted-foreground py-8 text-center">Loading…</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Timeslot</TableHead>
-                  <TableHead>Program</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead className="text-right">Kids</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Desktop table */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Timeslot</TableHead>
+                      <TableHead>Program</TableHead>
+                      <TableHead>Contact</TableHead>
+                      <TableHead className="text-right">Kids</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map((b) => (
+                      <TableRow 
+                        key={b.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => setSelectedBooking(b)}
+                      >
+                        <TableCell>{b.date ?? "—"}</TableCell>
+                        <TableCell>{b.timeslot ?? "—"}</TableCell>
+                        <TableCell>{b.program_name ?? "—"}</TableCell>
+                        <TableCell>{b.contacts?.name ?? "—"}</TableCell>
+                        <TableCell className="text-right">{b.kids_count ?? 0}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile cards */}
+              <div className="md:hidden space-y-3">
                 {filtered.map((b) => (
-                  <TableRow 
+                  <div
                     key={b.id}
-                    className="cursor-pointer hover:bg-muted/50"
+                    className="rounded-lg border p-4 space-y-2 cursor-pointer hover:bg-muted/50 active:bg-muted"
                     onClick={() => setSelectedBooking(b)}
                   >
-                    <TableCell>{b.date ?? "—"}</TableCell>
-                    <TableCell>{b.timeslot ?? "—"}</TableCell>
-                    <TableCell>{b.program_name ?? "—"}</TableCell>
-                    <TableCell>{b.contacts?.name ?? "—"}</TableCell>
-                    <TableCell className="text-right">{b.kids_count ?? 0}</TableCell>
-                  </TableRow>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-semibold">{b.contacts?.name ?? "—"}</p>
+                        <p className="text-sm text-muted-foreground">{b.program_name ?? "—"}</p>
+                      </div>
+                      {(b.kids_count ?? 0) > 0 && (
+                        <Badge variant="secondary">{b.kids_count} kids</Badge>
+                      )}
+                    </div>
+                    <div className="flex gap-4 text-sm text-muted-foreground">
+                      <span>{b.date ?? "—"}</span>
+                      <span>{b.timeslot ?? "—"}</span>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            </>
           )}
           {!loading && filtered.length === 0 && (
             <p className="text-muted-foreground py-8 text-center">No bookings match your filters.</p>
@@ -395,7 +426,7 @@ export default function BookingsPage() {
           
           {selectedBooking && (
             <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label className="text-xs text-muted-foreground">Date</Label>
                   <p className="font-medium">{selectedBooking.date ?? "—"}</p>

@@ -234,23 +234,23 @@ export default function MembersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
         <div>
           <h1 className="text-2xl font-bold">Memberships</h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Manage member programs and status.
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setIsExportOpen(true)}>Export Data</Button>
-          <Button onClick={() => setIsAdding(true)}>Add Membership</Button>
+          <Button variant="outline" className="flex-1 sm:flex-none" onClick={() => setIsExportOpen(true)}>Export Data</Button>
+          <Button className="flex-1 sm:flex-none" onClick={() => setIsAdding(true)}>Add Membership</Button>
         </div>
       </div>
 
       <Card>
         <CardHeader className="pb-4">
-          <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[200px]">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="sm:col-span-2">
               <Label htmlFor="search">Search</Label>
               <Input
                 id="search"
@@ -260,7 +260,7 @@ export default function MembersPage() {
                 className="mt-1"
               />
             </div>
-            <div className="w-[180px]">
+            <div>
               <Label>Status</Label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="mt-1">
@@ -280,36 +280,77 @@ export default function MembersPage() {
           {loading ? (
             <p className="text-muted-foreground py-8 text-center">Loading…</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Member Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Start Date</TableHead>
-                  <TableHead>End Date</TableHead>
-                  <TableHead>Code</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Desktop table */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Member Name</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Start Date</TableHead>
+                      <TableHead>End Date</TableHead>
+                      <TableHead>Code</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map((m) => (
+                      <TableRow key={m.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openEdit(m)}>
+                        <TableCell className="font-medium">
+                          {m.contacts?.name ?? "—"}
+                        </TableCell>
+                        <TableCell>{m.membership_type ?? "—"}</TableCell>
+                        <TableCell>{m.start_date ?? "—"}</TableCell>
+                        <TableCell>{m.end_date ?? "—"}</TableCell>
+                        <TableCell><code>{m.code ?? "—"}</code></TableCell>
+                        <TableCell>
+                          <Badge variant={m.status === "active" ? "default" : "secondary"}>
+                            {m.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile cards */}
+              <div className="md:hidden space-y-3">
                 {filtered.map((m) => (
-                  <TableRow key={m.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openEdit(m)}>
-                    <TableCell className="font-medium">
-                      {m.contacts?.name ?? "—"}
-                    </TableCell>
-                    <TableCell>{m.membership_type ?? "—"}</TableCell>
-                    <TableCell>{m.start_date ?? "—"}</TableCell>
-                    <TableCell>{m.end_date ?? "—"}</TableCell>
-                    <TableCell><code>{m.code ?? "—"}</code></TableCell>
-                    <TableCell>
+                  <div
+                    key={m.id}
+                    className="rounded-lg border p-4 space-y-2 cursor-pointer hover:bg-muted/50 active:bg-muted"
+                    onClick={() => openEdit(m)}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-semibold">{m.contacts?.name ?? "—"}</p>
+                        <p className="text-sm text-muted-foreground">{m.membership_type ?? "—"}</p>
+                      </div>
                       <Badge variant={m.status === "active" ? "default" : "secondary"}>
                         {m.status}
                       </Badge>
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Start</p>
+                        <p>{m.start_date ?? "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">End</p>
+                        <p>{m.end_date ?? "—"}</p>
+                      </div>
+                    </div>
+                    {m.code && (
+                      <p className="text-xs text-muted-foreground">
+                        Code: <code>{m.code}</code>
+                      </p>
+                    )}
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            </>
           )}
           {!loading && filtered.length === 0 && (
             <p className="text-muted-foreground py-8 text-center">

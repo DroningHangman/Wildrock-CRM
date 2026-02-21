@@ -310,21 +310,21 @@ export default function RelationshipsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
         <div>
           <h1 className="text-2xl font-bold">Relationships</h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Manage households, schools, and organizations.
           </p>
         </div>
-        <Button onClick={() => setIsCreating(true)}>Add Entity</Button>
+        <Button className="w-full sm:w-auto" onClick={() => setIsCreating(true)}>Add Entity</Button>
       </div>
 
       {/* Filters + Table */}
       <Card>
         <CardHeader className="pb-4">
-          <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[200px]">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="sm:col-span-2">
               <Label htmlFor="search">Search</Label>
               <Input
                 id="search"
@@ -334,7 +334,7 @@ export default function RelationshipsPage() {
                 className="mt-1"
               />
             </div>
-            <div className="w-[180px]">
+            <div>
               <Label>Type</Label>
               <Select value={typeFilter} onValueChange={setTypeFilter}>
                 <SelectTrigger className="mt-1">
@@ -354,51 +354,76 @@ export default function RelationshipsPage() {
           {loading ? (
             <p className="text-muted-foreground py-8 text-center">Loading…</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Members</TableHead>
-                  <TableHead>Description</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Desktop table */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Members</TableHead>
+                      <TableHead>Description</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map((e) => (
+                      <TableRow
+                        key={e.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => openEntityDetail(e)}
+                      >
+                        <TableCell className="font-medium">{e.name}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">
+                            {ENTITY_TYPE_LABELS[e.entity_type] ?? e.entity_type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {getMemberCount(e)} member
+                          {getMemberCount(e) !== 1 ? "s" : ""}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {e.description ?? "—"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile cards */}
+              <div className="md:hidden space-y-3">
                 {filtered.map((e) => (
-                  <TableRow
+                  <div
                     key={e.id}
-                    className="cursor-pointer hover:bg-muted/50"
+                    className="rounded-lg border p-4 space-y-2 cursor-pointer hover:bg-muted/50 active:bg-muted"
                     onClick={() => openEntityDetail(e)}
                   >
-                    <TableCell className="font-medium">{e.name}</TableCell>
-                    <TableCell>
+                    <div className="flex justify-between items-start">
+                      <p className="font-semibold">{e.name}</p>
                       <Badge variant="secondary">
                         {ENTITY_TYPE_LABELS[e.entity_type] ?? e.entity_type}
                       </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {getMemberCount(e)} member
-                      {getMemberCount(e) !== 1 ? "s" : ""}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {e.description ?? "—"}
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {getMemberCount(e)} member{getMemberCount(e) !== 1 ? "s" : ""}
+                    </p>
+                    {e.description && (
+                      <p className="text-xs text-muted-foreground">{e.description}</p>
+                    )}
+                  </div>
                 ))}
-                {filtered.length === 0 && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={4}
-                      className="text-center text-muted-foreground py-8"
-                    >
-                      {entities.length === 0
-                        ? "No entities yet. Create one to get started."
-                        : "No results match your filters."}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+              </div>
+
+              {filtered.length === 0 && (
+                <p className="text-center text-muted-foreground py-8">
+                  {entities.length === 0
+                    ? "No entities yet. Create one to get started."
+                    : "No results match your filters."}
+                </p>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
@@ -507,43 +532,68 @@ export default function RelationshipsPage() {
                   No members yet. Add one below.
                 </p>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Contact</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Added</TableHead>
-                      <TableHead className="w-[80px]"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <>
+                  {/* Desktop table */}
+                  <div className="hidden sm:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Contact</TableHead>
+                          <TableHead>Role</TableHead>
+                          <TableHead>Added</TableHead>
+                          <TableHead className="w-[80px]"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {entityMembers.map((m) => (
+                          <TableRow key={m.id}>
+                            <TableCell className="font-medium">
+                              {m.contacts?.name ?? "Unknown"}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{m.role}</Badge>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-sm">
+                              {m.created_at
+                                ? new Date(m.created_at).toLocaleDateString()
+                                : "—"}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => removeMember(m.id)}
+                              >
+                                Remove
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Mobile cards */}
+                  <div className="sm:hidden space-y-2">
                     {entityMembers.map((m) => (
-                      <TableRow key={m.id}>
-                        <TableCell className="font-medium">
-                          {m.contacts?.name ?? "Unknown"}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{m.role}</Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {m.created_at
-                            ? new Date(m.created_at).toLocaleDateString()
-                            : "—"}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => removeMember(m.id)}
-                          >
-                            Remove
-                          </Button>
-                        </TableCell>
-                      </TableRow>
+                      <div key={m.id} className="rounded-lg border p-3 flex justify-between items-center">
+                        <div>
+                          <p className="font-medium text-sm">{m.contacts?.name ?? "Unknown"}</p>
+                          <Badge variant="outline" className="text-[10px] mt-1">{m.role}</Badge>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive shrink-0"
+                          onClick={() => removeMember(m.id)}
+                        >
+                          Remove
+                        </Button>
+                      </div>
                     ))}
-                  </TableBody>
-                </Table>
+                  </div>
+                </>
               )}
 
               {/* Add member */}
