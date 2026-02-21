@@ -465,21 +465,21 @@ export default function ContactsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
         <div>
           <h1 className="text-2xl font-bold">Contacts</h1>
-          <p className="text-muted-foreground">Search and manage your community.</p>
+          <p className="text-muted-foreground text-sm">Search and manage your community.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setIsExportOpen(true)}>Export Data</Button>
-          <Button onClick={() => setIsAdding(true)}>Add Contact</Button>
+          <Button variant="outline" className="flex-1 sm:flex-none" onClick={() => setIsExportOpen(true)}>Export Data</Button>
+          <Button className="flex-1 sm:flex-none" onClick={() => setIsAdding(true)}>Add Contact</Button>
         </div>
       </div>
 
       <Card>
         <CardHeader className="pb-4">
-          <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[200px]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="sm:col-span-2 lg:col-span-4">
               <Label htmlFor="search">Search</Label>
               <Input
                 id="search"
@@ -489,7 +489,7 @@ export default function ContactsPage() {
                 className="mt-1"
               />
             </div>
-            <div className="w-[180px]">
+            <div>
               <Label>Contact type</Label>
               <Select value={typeFilter} onValueChange={setTypeFilter}>
                 <SelectTrigger className="mt-1">
@@ -503,7 +503,7 @@ export default function ContactsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="w-[180px]">
+            <div>
               <Label>Entity type</Label>
               <Select value={entityTypeFilter} onValueChange={(val) => { setEntityTypeFilter(val); setEntityIdFilter("all"); }}>
                 <SelectTrigger className="mt-1">
@@ -518,7 +518,7 @@ export default function ContactsPage() {
               </Select>
             </div>
             {entityTypeFilter !== "all" && (
-              <div className="w-[200px]">
+              <div>
                 <Label>Entity</Label>
                 <Select value={entityIdFilter} onValueChange={setEntityIdFilter}>
                   <SelectTrigger className="mt-1">
@@ -537,7 +537,7 @@ export default function ContactsPage() {
                 </Select>
               </div>
             )}
-            <div className="w-[200px]">
+            <div>
               <Label>Event participation</Label>
               <Select value={participationProgram} onValueChange={setParticipationProgram}>
                 <SelectTrigger className="mt-1">
@@ -552,7 +552,7 @@ export default function ContactsPage() {
               </Select>
             </div>
             {participationProgram !== "none" && (
-              <div className="w-[120px]">
+              <div>
                 <Label>Min events</Label>
                 <Select value={participationMin} onValueChange={setParticipationMin}>
                   <SelectTrigger className="mt-1">
@@ -572,56 +572,111 @@ export default function ContactsPage() {
           {loading ? (
             <p className="text-muted-foreground py-8 text-center">Loading…</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Types</TableHead>
-                  <TableHead>Organization</TableHead>
-                  <TableHead>Tags</TableHead>
-                  <TableHead>Marketing Consent</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Desktop table */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>Types</TableHead>
+                      <TableHead>Organization</TableHead>
+                      <TableHead>Tags</TableHead>
+                      <TableHead>Marketing Consent</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map((c) => (
+                      <TableRow
+                        key={c.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => openEdit(c)}
+                      >
+                        <TableCell className="font-medium">{c.name ?? "—"}</TableCell>
+                        <TableCell>{c.email ?? "—"}</TableCell>
+                        <TableCell>{c.phone ?? "—"}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {(c.contact_types ?? []).map((t) => (
+                              <Badge key={t} variant="secondary">{t}</Badge>
+                            ))}
+                          </div>
+                        </TableCell>
+                        <TableCell>{c.organization ?? "—"}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {(c.tags ?? []).map((t) => (
+                              <Badge key={t} variant="outline">{t}</Badge>
+                            ))}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {c.marketing_consent === true ? (
+                            <Badge variant="default" className="bg-green-600">Yes</Badge>
+                          ) : c.marketing_consent === false ? (
+                            <Badge variant="secondary">No</Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile cards */}
+              <div className="md:hidden space-y-3">
                 {filtered.map((c) => (
-                  <TableRow
+                  <div
                     key={c.id}
-                    className="cursor-pointer hover:bg-muted/50"
+                    className="rounded-lg border p-4 space-y-2 cursor-pointer hover:bg-muted/50 active:bg-muted"
                     onClick={() => openEdit(c)}
                   >
-                    <TableCell className="font-medium">{c.name ?? "—"}</TableCell>
-                    <TableCell>{c.email ?? "—"}</TableCell>
-                    <TableCell>{c.phone ?? "—"}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {(c.contact_types ?? []).map((t) => (
-                          <Badge key={t} variant="secondary">{t}</Badge>
-                        ))}
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-semibold">{c.name ?? "—"}</p>
+                        {c.email && (
+                          <p className="text-sm text-muted-foreground truncate max-w-[220px]">
+                            {c.email}
+                          </p>
+                        )}
                       </div>
-                    </TableCell>
-                    <TableCell>{c.organization ?? "—"}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {(c.tags ?? []).map((t) => (
-                          <Badge key={t} variant="outline">{t}</Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {c.marketing_consent === true ? (
-                        <Badge variant="default" className="bg-green-600">Yes</Badge>
-                      ) : c.marketing_consent === false ? (
-                        <Badge variant="secondary">No</Badge>
-                      ) : (
-                        <span className="text-muted-foreground text-xs">—</span>
+                      {c.marketing_consent === true && (
+                        <Badge variant="default" className="bg-green-600 text-[10px] shrink-0">
+                          Consent
+                        </Badge>
                       )}
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                    {c.phone && (
+                      <p className="text-sm text-muted-foreground">{c.phone}</p>
+                    )}
+                    {((c.contact_types ?? []).length > 0 || (c.tags ?? []).length > 0) && (
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {(c.contact_types ?? []).map((t) => (
+                          <Badge key={t} variant="secondary" className="text-[10px]">
+                            {t}
+                          </Badge>
+                        ))}
+                        {(c.tags ?? []).map((t) => (
+                          <Badge key={t} variant="outline" className="text-[10px]">
+                            {t}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+
+              {filtered.length === 0 && (
+                <p className="text-muted-foreground py-8 text-center">
+                  No contacts match your filters.
+                </p>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
@@ -722,17 +777,17 @@ export default function ContactsPage() {
       {/* Contact 360 View Dialog */}
       <Dialog open={!!editingContact} onOpenChange={(o) => !o && setEditingContact(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
-          <div className="p-6 pb-0 pr-12 flex justify-between items-start">
+          <div className="p-6 pb-0 pr-12 space-y-3">
             <div>
               <DialogTitle className="text-2xl font-bold">{editingContact?.name}</DialogTitle>
               <DialogDescription>Contact 360 View</DialogDescription>
             </div>
-            <div className="flex gap-2">
-              <Button variant={activeTab === "profile" ? "default" : "ghost"} size="sm" onClick={() => setActiveTab("profile")}>Profile</Button>
-              <Button variant={activeTab === "bookings" ? "default" : "ghost"} size="sm" onClick={() => setActiveTab("bookings")}>Bookings</Button>
-              <Button variant={activeTab === "memberships" ? "default" : "ghost"} size="sm" onClick={() => setActiveTab("memberships")}>Memberships</Button>
-              <Button variant={activeTab === "documents" ? "default" : "ghost"} size="sm" onClick={() => setActiveTab("documents")}>Documents</Button>
-              <Button variant={activeTab === "relationships" ? "default" : "ghost"} size="sm" onClick={() => setActiveTab("relationships")}>Relationships</Button>
+            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+              <Button variant={activeTab === "profile" ? "default" : "ghost"} size="sm" className="shrink-0" onClick={() => setActiveTab("profile")}>Profile</Button>
+              <Button variant={activeTab === "bookings" ? "default" : "ghost"} size="sm" className="shrink-0" onClick={() => setActiveTab("bookings")}>Bookings</Button>
+              <Button variant={activeTab === "memberships" ? "default" : "ghost"} size="sm" className="shrink-0" onClick={() => setActiveTab("memberships")}>Memberships</Button>
+              <Button variant={activeTab === "documents" ? "default" : "ghost"} size="sm" className="shrink-0" onClick={() => setActiveTab("documents")}>Documents</Button>
+              <Button variant={activeTab === "relationships" ? "default" : "ghost"} size="sm" className="shrink-0" onClick={() => setActiveTab("relationships")}>Relationships</Button>
             </div>
           </div>
 
