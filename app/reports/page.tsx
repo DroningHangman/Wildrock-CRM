@@ -480,23 +480,25 @@ export default function ReportsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
         <div>
           <h1 className="text-2xl font-bold">Reports</h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Program tracking and analytics.
           </p>
         </div>
         {selectedType && !isBookingSourced && (
-          <Button onClick={openAddForm}>Add Entry</Button>
+          <Button onClick={openAddForm} className="w-full sm:w-auto">
+            Add Entry
+          </Button>
         )}
       </div>
 
       {/* Filters */}
       <Card>
         <CardHeader className="pb-4">
-          <div className="flex flex-wrap gap-4 items-end">
-            <div className="w-[200px]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 items-end">
+            <div>
               <Label>Program</Label>
               <Select
                 value={selectedTypeId}
@@ -514,7 +516,7 @@ export default function ReportsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="w-[160px]">
+            <div>
               <Label>From</Label>
               <Input
                 type="date"
@@ -523,7 +525,7 @@ export default function ReportsPage() {
                 className="mt-1"
               />
             </div>
-            <div className="w-[160px]">
+            <div>
               <Label>To</Label>
               <Input
                 type="date"
@@ -536,6 +538,7 @@ export default function ReportsPage() {
               <Button
                 variant="ghost"
                 size="sm"
+                className="w-full sm:w-auto"
                 onClick={() => {
                   setDateFrom("");
                   setDateTo("");
@@ -590,79 +593,149 @@ export default function ReportsPage() {
               Select a program to view its report.
             </p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  {isBookingSourced && <TableHead>Bookings</TableHead>}
-                  {!isBookingSourced && schema.show_contact && (
-                    <TableHead>Contact</TableHead>
-                  )}
-                  {!isBookingSourced && schema.show_entity && (
-                    <TableHead>Entity</TableHead>
-                  )}
-                  {displayFields.map((f) => (
-                    <TableHead key={f.key}>{f.label}</TableHead>
-                  ))}
-                  {!isBookingSourced && <TableHead>Notes</TableHead>}
-                  {!isBookingSourced && (
-                    <TableHead className="w-[100px]"></TableHead>
-                  )}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* ── Desktop table (hidden on mobile) ── */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      {isBookingSourced && <TableHead>Bookings</TableHead>}
+                      {!isBookingSourced && schema.show_contact && (
+                        <TableHead>Contact</TableHead>
+                      )}
+                      {!isBookingSourced && schema.show_entity && (
+                        <TableHead>Entity</TableHead>
+                      )}
+                      {displayFields.map((f) => (
+                        <TableHead key={f.key}>{f.label}</TableHead>
+                      ))}
+                      {!isBookingSourced && <TableHead>Notes</TableHead>}
+                      {!isBookingSourced && (
+                        <TableHead className="w-[100px]"></TableHead>
+                      )}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isBookingSourced
+                      ? dailyRows.map((row) => (
+                          <TableRow key={row.date}>
+                            <TableCell className="font-medium">
+                              {row.date}
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-muted-foreground">
+                                {row.bookingCount}
+                              </span>
+                              {row.contactNames.length > 0 && (
+                                <span
+                                  className="ml-2 text-xs text-muted-foreground"
+                                  title={row.contactNames.join(", ")}
+                                >
+                                  ({row.contactNames.length <= 3
+                                    ? row.contactNames.join(", ")
+                                    : `${row.contactNames.slice(0, 2).join(", ")} +${row.contactNames.length - 2} more`})
+                                </span>
+                              )}
+                            </TableCell>
+                            {displayFields.map((f) => (
+                              <TableCell key={f.key}>
+                                {renderCellValue(f, row.data[f.key])}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))
+                      : entries.map((entry) => (
+                          <TableRow key={entry.id}>
+                            <TableCell className="font-medium">
+                              {entry.date}
+                            </TableCell>
+                            {schema.show_contact && (
+                              <TableCell>
+                                {entry.contacts?.name ?? "—"}
+                              </TableCell>
+                            )}
+                            {schema.show_entity && (
+                              <TableCell>
+                                {entry.entities?.name ?? "—"}
+                              </TableCell>
+                            )}
+                            {displayFields.map((f) => (
+                              <TableCell key={f.key}>
+                                {renderCellValue(f, entry.data[f.key])}
+                              </TableCell>
+                            ))}
+                            <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
+                              {entry.notes ?? "—"}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openEditForm(entry)}
+                                >
+                                  Edit
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => deleteEntry(entry.id)}
+                                >
+                                  Delete
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* ── Mobile cards (hidden on desktop) ── */}
+              <div className="md:hidden space-y-3">
                 {isBookingSourced
                   ? dailyRows.map((row) => (
-                      <TableRow key={row.date}>
-                        <TableCell className="font-medium">
-                          {row.date}
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-muted-foreground">
-                            {row.bookingCount}
-                          </span>
-                          {row.contactNames.length > 0 && (
-                            <span
-                              className="ml-2 text-xs text-muted-foreground"
-                              title={row.contactNames.join(", ")}
-                            >
-                              ({row.contactNames.length <= 3
-                                ? row.contactNames.join(", ")
-                                : `${row.contactNames.slice(0, 2).join(", ")} +${row.contactNames.length - 2} more`})
-                            </span>
-                          )}
-                        </TableCell>
-                        {displayFields.map((f) => (
-                          <TableCell key={f.key}>
-                            {renderCellValue(f, row.data[f.key])}
-                          </TableCell>
-                        ))}
-                      </TableRow>
+                      <div
+                        key={row.date}
+                        className="rounded-lg border p-4 space-y-2"
+                      >
+                        <div className="flex justify-between items-center">
+                          <span className="font-semibold">{row.date}</span>
+                          <Badge variant="secondary">
+                            {row.bookingCount}{" "}
+                            {row.bookingCount === 1 ? "booking" : "bookings"}
+                          </Badge>
+                        </div>
+                        {row.contactNames.length > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            {row.contactNames.length <= 3
+                              ? row.contactNames.join(", ")
+                              : `${row.contactNames.slice(0, 2).join(", ")} +${row.contactNames.length - 2} more`}
+                          </p>
+                        )}
+                        <div className="grid grid-cols-2 gap-2 pt-1">
+                          {displayFields.map((f) => (
+                            <div key={f.key}>
+                              <p className="text-xs text-muted-foreground">
+                                {f.label}
+                              </p>
+                              <p className="text-sm font-medium">
+                                {renderCellValue(f, row.data[f.key])}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     ))
                   : entries.map((entry) => (
-                      <TableRow key={entry.id}>
-                        <TableCell className="font-medium">
-                          {entry.date}
-                        </TableCell>
-                        {schema.show_contact && (
-                          <TableCell>
-                            {entry.contacts?.name ?? "—"}
-                          </TableCell>
-                        )}
-                        {schema.show_entity && (
-                          <TableCell>
-                            {entry.entities?.name ?? "—"}
-                          </TableCell>
-                        )}
-                        {displayFields.map((f) => (
-                          <TableCell key={f.key}>
-                            {renderCellValue(f, entry.data[f.key])}
-                          </TableCell>
-                        ))}
-                        <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
-                          {entry.notes ?? "—"}
-                        </TableCell>
-                        <TableCell>
+                      <div
+                        key={entry.id}
+                        className="rounded-lg border p-4 space-y-2"
+                      >
+                        <div className="flex justify-between items-center">
+                          <span className="font-semibold">{entry.date}</span>
                           <div className="flex gap-1">
                             <Button
                               variant="ghost"
@@ -680,31 +753,49 @@ export default function ReportsPage() {
                               Delete
                             </Button>
                           </div>
-                        </TableCell>
-                      </TableRow>
+                        </div>
+                        {schema.show_contact && entry.contacts?.name && (
+                          <p className="text-sm text-muted-foreground">
+                            {entry.contacts.name}
+                          </p>
+                        )}
+                        {schema.show_entity && entry.entities?.name && (
+                          <p className="text-sm text-muted-foreground">
+                            {entry.entities.name}
+                          </p>
+                        )}
+                        <div className="grid grid-cols-2 gap-2 pt-1">
+                          {displayFields.map((f) => (
+                            <div key={f.key}>
+                              <p className="text-xs text-muted-foreground">
+                                {f.label}
+                              </p>
+                              <p className="text-sm font-medium">
+                                {renderCellValue(f, entry.data[f.key])}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                        {entry.notes && (
+                          <p className="text-xs text-muted-foreground pt-1 border-t">
+                            {entry.notes}
+                          </p>
+                        )}
+                      </div>
                     ))}
-                {(isBookingSourced
-                  ? dailyRows.length === 0
-                  : entries.length === 0) && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={
-                        displayFields.length +
-                        2 +
-                        (!isBookingSourced && schema.show_contact ? 1 : 0) +
-                        (!isBookingSourced && schema.show_entity ? 1 : 0) +
-                        (!isBookingSourced ? 1 : 0)
-                      }
-                      className="text-center text-muted-foreground py-8"
-                    >
-                      {isBookingSourced
-                        ? "No bookings found. Bookings sync automatically from Cal.com."
-                        : "No entries yet. Click \"Add Entry\" to get started."}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+              </div>
+
+              {/* ── Empty state (shared) ── */}
+              {(isBookingSourced
+                ? dailyRows.length === 0
+                : entries.length === 0) && (
+                <p className="text-center text-muted-foreground py-8">
+                  {isBookingSourced
+                    ? "No bookings found. Bookings sync automatically from Cal.com."
+                    : "No entries yet. Click \"Add Entry\" to get started."}
+                </p>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
