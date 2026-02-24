@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { Amatic_SC } from "next/font/google";
 import { Nav } from "@/components/Nav";
 import "./globals.css";
 
@@ -12,6 +13,11 @@ const geistMono = localFont({
   src: "./fonts/GeistMonoVF.woff",
   variable: "--font-geist-mono",
   weight: "100 900",
+});
+const amatic = Amatic_SC({
+  weight: ["400", "700"],
+  subsets: ["latin"],
+  variable: "--font-amatic",
 });
 
 export const metadata: Metadata = {
@@ -27,7 +33,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-screen antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${amatic.variable} font-sans min-h-screen antialiased`}
       >
         <Nav />
         <main className="container mx-auto px-6 py-8">{children}</main>

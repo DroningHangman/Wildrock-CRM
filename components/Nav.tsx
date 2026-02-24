@@ -38,9 +38,9 @@ export function Nav() {
   if (pathname === "/login") return null;
 
   return (
-    <nav className="w-full bg-white border-b border-slate-200 shadow-sm">
+    <nav className="w-full bg-background border-b border-border shadow-sm">
       <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
-        <Link href="/" className="text-xl font-bold text-slate-900 hover:opacity-80 shrink-0">
+        <Link href="/" className="text-xl font-display font-bold text-foreground hover:opacity-80 shrink-0">
           Wildrock CRM
         </Link>
 
@@ -53,8 +53,8 @@ export function Nav() {
               className={cn(
                 "text-sm font-bold transition-all py-1 border-b-2",
                 pathname === link.href 
-                  ? "text-blue-600 border-blue-600" 
-                  : "text-slate-500 border-transparent hover:text-slate-900"
+                  ? "text-primary border-primary" 
+                  : "text-muted-foreground border-transparent hover:text-foreground"
               )}
             >
               {link.label}
@@ -64,7 +64,7 @@ export function Nav() {
         
         <div className="flex items-center gap-3">
           {user && (
-            <span className="hidden lg:inline text-xs font-medium text-slate-500">
+            <span className="hidden lg:inline text-xs font-medium text-muted-foreground">
               {user.email}
             </span>
           )}
@@ -72,7 +72,7 @@ export function Nav() {
             <Button 
               variant="outline" 
               size="sm" 
-              className="hidden lg:inline-flex border-slate-200 text-slate-700 hover:bg-slate-50"
+              className="hidden lg:inline-flex border-input text-foreground hover:bg-muted"
               onClick={async () => {
                 await supabase.auth.signOut();
                 window.location.href = "/login";
@@ -81,14 +81,14 @@ export function Nav() {
               Logout
             </Button>
           ) : (
-            <Link href="/login" className="hidden lg:inline text-sm font-bold text-slate-700 hover:text-slate-900">
+            <Link href="/login" className="hidden lg:inline text-sm font-bold text-foreground hover:text-primary">
               Login
             </Link>
           )}
 
           {/* Hamburger button */}
           <button
-            className="lg:hidden p-2 -mr-2 text-slate-600 hover:text-slate-900"
+            className="lg:hidden p-2 -mr-2 text-muted-foreground hover:text-foreground"
             onClick={() => setMobileOpen((v) => !v)}
             aria-label="Toggle navigation"
           >
@@ -103,7 +103,7 @@ export function Nav() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="lg:hidden border-t border-slate-200 bg-white">
+        <div className="lg:hidden border-t border-border bg-background">
           <div className="container mx-auto px-4 py-3 flex flex-col gap-1">
             {links.map((link) => (
               <Link
@@ -112,16 +112,16 @@ export function Nav() {
                 className={cn(
                   "text-sm font-bold py-2 px-3 rounded-md transition-colors",
                   pathname === link.href
-                    ? "text-blue-600 bg-blue-50"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    ? "text-primary bg-muted"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
                 {link.label}
               </Link>
             ))}
-            <div className="border-t border-slate-100 mt-2 pt-2 flex items-center justify-between px-3">
+            <div className="border-t border-border mt-2 pt-2 flex items-center justify-between px-3">
               {user && (
-                <span className="text-xs font-medium text-slate-500 truncate mr-3">
+                <span className="text-xs font-medium text-muted-foreground truncate mr-3">
                   {user.email}
                 </span>
               )}
@@ -129,7 +129,7 @@ export function Nav() {
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="shrink-0 border-slate-200 text-slate-700 hover:bg-slate-50"
+                  className="shrink-0 border-input text-foreground hover:bg-muted"
                   onClick={async () => {
                     await supabase.auth.signOut();
                     window.location.href = "/login";
@@ -138,7 +138,7 @@ export function Nav() {
                   Logout
                 </Button>
               ) : (
-                <Link href="/login" className="text-sm font-bold text-slate-700 hover:text-slate-900">
+                <Link href="/login" className="text-sm font-bold text-foreground hover:text-primary">
                   Login
                 </Link>
               )}
