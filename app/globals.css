@@ -12,29 +12,29 @@
 
 @layer base {
   :root {
-    /* Wildrock brand: warm brown #3C342F from wildrock.org */
+    /* Wildrock brand greens: #3E6F28 (forest), #A8D172 (sage) */
     --background: 0 0% 100%;
-    --foreground: 23 15% 15%;
+    --foreground: 0 0% 9%;
     --card: 0 0% 100%;
-    --card-foreground: 23 15% 15%;
+    --card-foreground: 0 0% 9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 23 15% 15%;
-    --primary: 23 12% 21%;
+    --popover-foreground: 0 0% 9%;
+    --primary: 101 47% 30%;
     --primary-foreground: 0 0% 98%;
-    --secondary: 23 10% 96%;
-    --secondary-foreground: 23 12% 21%;
-    --muted: 23 10% 96%;
-    --muted-foreground: 23 10% 45%;
-    --accent: 23 10% 96%;
-    --accent-foreground: 23 12% 21%;
+    --secondary: 101 20% 96%;
+    --secondary-foreground: 101 47% 30%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 88 51% 90%;
+    --accent-foreground: 101 47% 30%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 23 10% 90%;
-    --input: 23 10% 90%;
-    --ring: 23 12% 21%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
+    --border: 101 15% 90%;
+    --input: 101 15% 90%;
+    --ring: 101 47% 30%;
+    --chart-1: 101 47% 30%;
+    --chart-2: 88 51% 63%;
+    --chart-3: 101 35% 45%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
