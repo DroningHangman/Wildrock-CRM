@@ -84,24 +84,32 @@ export async function POST(req: Request) {
       return false
     })()
 
+    // Derive contact type from the booked event type
+    const contactTypeForEvent = eventType?.toLowerCase().includes('field-trip') ? 'Teacher' : 'Parent'
+
     // 1. Find or Create Contact
     let contactId = null
     const { data: existingContact } = await supabaseAdmin
       .from('contacts')
-      .select('id, phone, marketing_consent')
+      .select('id, phone, marketing_consent, contact_types')
       .eq('email', attendee.email)
       .single()
 
     if (existingContact) {
       contactId = existingContact.id
       // Update phone and/or consent if we have new information
-      const updates: { phone?: string; marketing_consent?: boolean } = {}
+      const updates: { phone?: string; marketing_consent?: boolean; contact_types?: string[] } = {}
       if (phoneNumber && !existingContact.phone) {
         updates.phone = phoneNumber
       }
       // Update consent if provided (consent=true takes precedence, but don't overwrite existing true with false)
       if (marketingConsent !== false) {
         updates.marketing_consent = marketingConsent || existingContact.marketing_consent
+      }
+      // Add contact type derived from this booking if not already present
+      const existingTypes: string[] = existingContact.contact_types || []
+      if (!existingTypes.includes(contactTypeForEvent)) {
+        updates.contact_types = [...existingTypes, contactTypeForEvent]
       }
       if (Object.keys(updates).length > 0) {
         await supabaseAdmin
@@ -117,7 +125,7 @@ export async function POST(req: Request) {
           email: attendee.email,
           phone: phoneNumber,
           marketing_consent: marketingConsent || false,
-          contact_types: ['Parent'], // Default to Parent for Cal.com bookings
+          contact_types: [contactTypeForEvent],
           notes: 'Added automatically via Cal.com'
         })
         .select()
