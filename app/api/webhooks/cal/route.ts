@@ -60,10 +60,10 @@ export async function POST(req: Request) {
       return false
     }
     
-    // Extract marketing consent from the newsletter checkbox (Cal.com field identifier: "newsletter")
-    // This is distinct from the ecommunication/legal consent which is stored in form_responses only
+    // Extract marketing consent from the ecommunication radio (Cal.com field identifier: "ecommunication")
+    // This is the required Yes/No field: "I consent to receive written and electronic communications from Wildrock"
     const marketingConsent = (() => {
-      if (responses?.newsletter !== undefined) return extractConsent(responses.newsletter)
+      if (responses?.ecommunication !== undefined) return extractConsent(responses.ecommunication)
       if (responses?.marketingConsent !== undefined) return extractConsent(responses.marketingConsent)
       if (responses?.marketing_consent !== undefined) return extractConsent(responses.marketing_consent)
       return false
