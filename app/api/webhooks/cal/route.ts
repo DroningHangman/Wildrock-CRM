@@ -63,7 +63,7 @@ export async function POST(req: Request) {
     // Extract marketing consent from the ecommunication radio (Cal.com field identifier: "ecommunication")
     // This is the required Yes/No field: "I consent to receive written and electronic communications from Wildrock"
     const marketingConsent = (() => {
-      if (responses?.ecommunication !== undefined) return extractConsent(responses.ecommunication)
+      if (responses?.Ecommunication !== undefined) return extractConsent(responses.Ecommunication)
       if (responses?.marketingConsent !== undefined) return extractConsent(responses.marketingConsent)
       if (responses?.marketing_consent !== undefined) return extractConsent(responses.marketing_consent)
       return false
