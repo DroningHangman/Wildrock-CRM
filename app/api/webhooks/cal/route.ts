@@ -144,11 +144,15 @@ export async function POST(req: Request) {
       hour12: true 
     })
 
-    // 2. Extract Kids Count from the standardized 'kids_attending' field identifier
-    const kidsCount = (() => {
-      const val = extractValue(responses?.kids_attending)
+    // 2. Extract attendee counts from standardized Cal.com field identifiers
+    const extractCount = (key: string) => {
+      const val = extractValue(responses?.[key])
       return val ? parseInt(val) || 0 : 0
-    })()
+    }
+    const kidsCount       = extractCount('kids_attending')
+    const adultsCount     = extractCount('adults_attending')
+    const chaperonesCount = extractCount('chaperones_attending')
+    const teachersCount   = extractCount('teachers_attending')
 
     // 3. Store all form responses in JSONB for flexible event-specific fields
     // This captures all custom questions/answers from Cal.com forms
@@ -189,7 +193,13 @@ export async function POST(req: Request) {
         kids_count: kidsCount,
         cal_uid: uid ?? null,
         notes: `Cal.com Booking: ${eventType}`,
-        form_responses: Object.keys(formResponses).length > 0 ? formResponses : null
+        form_responses: Object.keys(formResponses).length > 0 ? formResponses : null,
+        report_data: {
+          children_count: kidsCount,
+          adults_count: adultsCount,
+          chaperones_count: chaperonesCount,
+          teachers_count: teachersCount,
+        }
       })
 
     if (bookingError) throw bookingError

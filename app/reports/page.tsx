@@ -47,8 +47,19 @@ const BOOKING_SOURCE_MAP: Record<string, string> = {
 };
 
 // Maps schema field keys → booking column extractors for auto-population
+// report_data takes priority; these are fallbacks for older bookings that predate report_data pre-population
+const fromFormResponses = (b: Booking, key: string): number => {
+  const field = b.form_responses?.[key] as Record<string, unknown> | undefined;
+  if (!field) return 0;
+  const val = typeof field.value === "string" ? field.value : String(field.value ?? "");
+  return parseInt(val) || 0;
+};
+
 const BOOKING_FIELD_DEFAULTS: Record<string, (b: Booking) => unknown> = {
-  children_count: (b) => b.kids_count ?? 0,
+  children_count:   (b) => b.kids_count ?? 0,
+  adults_count:     (b) => fromFormResponses(b, "adults_attending"),
+  chaperones_count: (b) => fromFormResponses(b, "chaperones_attending"),
+  teachers_count:   (b) => fromFormResponses(b, "teachers_attending"),
 };
 
 export default function ReportsPage() {
