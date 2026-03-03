@@ -19,6 +19,7 @@ export async function POST(req: Request) {
     }
 
     const { startTime, attendees, type: eventType, responses } = bookingData
+    console.log('Cal.com responses:', JSON.stringify(responses, null, 2))
     const attendee = attendees[0]
 
     if (!attendee) {
