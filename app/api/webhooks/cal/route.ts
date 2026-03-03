@@ -121,9 +121,11 @@ export async function POST(req: Request) {
       hour12: true 
     })
 
-    // 2. Extract Kids Count (looking for common field names in responses)
-    // Cal.com custom fields appear in the 'responses' object
-    const kidsCount = parseInt(responses?.kids_count || responses?.kids || '0') || 0
+    // 2. Extract Kids Count from the standardized 'kids_attending' field identifier
+    const kidsCount = (() => {
+      const val = extractValue(responses?.kids_attending)
+      return val ? parseInt(val) || 0 : 0
+    })()
 
     // 3. Store all form responses in JSONB for flexible event-specific fields
     // This captures all custom questions/answers from Cal.com forms
