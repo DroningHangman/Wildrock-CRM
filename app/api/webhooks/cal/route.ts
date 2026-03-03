@@ -19,7 +19,6 @@ export async function POST(req: Request) {
     }
 
     const { startTime, attendees, type: eventType, responses } = bookingData
-    console.log('Cal.com responses:', JSON.stringify(responses, null, 2))
     const attendee = attendees[0]
 
     if (!attendee) {
@@ -61,23 +60,14 @@ export async function POST(req: Request) {
       return false
     }
     
-    // Check for consent in various field identifiers
-    const marketingConsent = extractConsent(responses?.marketing_consent) ||
-                             extractConsent(responses?.marketingConsent) ||
-                             extractConsent(responses?.newsletter) ||
-                             extractConsent(responses?.consent) ||
-                             // Check if any field label contains "consent" or "newsletter"
-                             (() => {
-                               if (!responses) return false
-                               for (const [, value] of Object.entries(responses)) {
-                                 const field = value as Record<string, unknown>
-                                 const label = String(field?.label || '').toLowerCase()
-                                 if (label.includes('consent') || label.includes('newsletter')) {
-                                   return extractConsent(value)
-                                 }
-                               }
-                               return false
-                             })()
+    // Extract marketing consent from the newsletter checkbox (Cal.com field identifier: "newsletter")
+    // This is distinct from the ecommunication/legal consent which is stored in form_responses only
+    const marketingConsent = (() => {
+      if (responses?.newsletter !== undefined) return extractConsent(responses.newsletter)
+      if (responses?.marketingConsent !== undefined) return extractConsent(responses.marketingConsent)
+      if (responses?.marketing_consent !== undefined) return extractConsent(responses.marketing_consent)
+      return false
+    })()
 
     // 1. Find or Create Contact
     let contactId = null
