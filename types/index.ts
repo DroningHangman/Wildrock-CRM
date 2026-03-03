@@ -21,6 +21,7 @@ export interface Booking {
   program_name: string | null;
   kids_count: number | null;
   notes: string | null;
+  cal_uid?: string | null; // Cal.com booking UID for idempotent updates
   form_responses?: Record<string, unknown> | null; // JSONB field for dynamic form answers
   report_data?: Record<string, unknown> | null; // Manual enrichment data from Reports tab
   contacts?: Contact | null;

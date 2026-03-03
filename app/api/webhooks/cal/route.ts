@@ -10,16 +10,31 @@ export async function POST(req: Request) {
     )
 
     const payload = await req.json()
-    
-    // Cal.com sends data in a 'payload' object or directly depending on the trigger
+
+    // triggerEvent is at the top level of the Cal.com payload
+    const triggerEvent: string | undefined = payload.triggerEvent
+
+    // Cal.com sends booking data in a 'payload' object or directly depending on the trigger
     const bookingData = payload.payload || payload
-    
+
     if (!bookingData) {
       return NextResponse.json({ error: 'No booking data found' }, { status: 400 })
     }
 
-    const { startTime, attendees, type: eventType, responses } = bookingData
-    const attendee = attendees[0]
+    const { uid, rescheduleUid, startTime, attendees, type: eventType, responses } = bookingData
+
+    // Handle BOOKING_CANCELLED — find by cal_uid and delete, then return early
+    if (triggerEvent === 'BOOKING_CANCELLED') {
+      if (uid) {
+        await supabaseAdmin
+          .from('bookings')
+          .delete()
+          .eq('cal_uid', uid)
+      }
+      return NextResponse.json({ success: true })
+    }
+
+    const attendee = attendees?.[0]
 
     if (!attendee) {
       return NextResponse.json({ error: 'No attendee found' }, { status: 400 })
@@ -131,7 +146,30 @@ export async function POST(req: Request) {
     // This captures all custom questions/answers from Cal.com forms
     const formResponses = responses || {}
 
-    // 4. Insert Booking
+    // 4. Insert or Update Booking
+    if (triggerEvent === 'BOOKING_RESCHEDULED' && rescheduleUid) {
+      // Try to update the existing booking by its old cal_uid
+      const { data: updated, error: updateError } = await supabaseAdmin
+        .from('bookings')
+        .update({
+          date: dateStr,
+          timeslot: timeStr,
+          kids_count: kidsCount,
+          cal_uid: uid,
+          form_responses: Object.keys(formResponses).length > 0 ? formResponses : null
+        })
+        .eq('cal_uid', rescheduleUid)
+        .select('id')
+
+      if (updateError) throw updateError
+
+      // If no matching row found, fall through to insert below
+      if (updated && updated.length > 0) {
+        return NextResponse.json({ success: true })
+      }
+    }
+
+    // BOOKING_CREATED (or reschedule fallback — no existing row found)
     const { error: bookingError } = await supabaseAdmin
       .from('bookings')
       .insert({
@@ -141,6 +179,7 @@ export async function POST(req: Request) {
         program_name: eventType,
         booking_type: 'cal_sync',
         kids_count: kidsCount,
+        cal_uid: uid ?? null,
         notes: `Cal.com Booking: ${eventType}`,
         form_responses: Object.keys(formResponses).length > 0 ? formResponses : null
       })

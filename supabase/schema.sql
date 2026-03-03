@@ -27,7 +27,8 @@ create table bookings (
   kids_count int,
   notes text,
   form_responses jsonb, -- Stores dynamic form answers (allergies, emergency contact, etc.) per event type
-  report_data jsonb default '{}' -- Manual enrichment data entered via Reports (owes, paid, etc.)
+  report_data jsonb default '{}', -- Manual enrichment data entered via Reports (owes, paid, etc.)
+  cal_uid text unique -- Cal.com booking UID; used to update/delete on reschedule/cancel (added via: ALTER TABLE bookings ADD COLUMN cal_uid text UNIQUE)
 );
 
 -- documents (metadata; actual files in storage bucket "documents")
