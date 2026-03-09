@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -214,6 +215,11 @@ export default function AdminPage() {
   const [adminUsersError, setAdminUsersError] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
+  // Invite user state
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviting, setInviting] = useState(false);
+  const [inviteResult, setInviteResult] = useState<{ ok: boolean; message: string } | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function fetchAdminUsers() {
@@ -247,6 +253,30 @@ export default function AdminPage() {
       setAdminUsersError("Failed to update user role.");
     } finally {
       setTogglingId(null);
+    }
+  }
+
+  async function sendInvite() {
+    setInviting(true);
+    setInviteResult(null);
+    try {
+      const res = await fetch("/api/admin/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: inviteEmail }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setInviteResult({ ok: false, message: json.error ?? "Failed to send invite." });
+      } else {
+        setInviteResult({ ok: true, message: `Invite sent to ${inviteEmail}.` });
+        setInviteEmail("");
+        fetchAdminUsers(); // refresh list so new user appears
+      }
+    } catch {
+      setInviteResult({ ok: false, message: "Something went wrong." });
+    } finally {
+      setInviting(false);
     }
   }
 
@@ -870,6 +900,42 @@ export default function AdminPage() {
                     <p className="text-muted-foreground text-sm">No tags yet.</p>
                   )}
                 </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Invite user */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Invite User</CardTitle>
+              <CardDescription>
+                Send an invite email so they can set their own password and log in.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex gap-2">
+                <Input
+                  type="email"
+                  placeholder="email@example.com"
+                  value={inviteEmail}
+                  onChange={(e) => {
+                    setInviteEmail(e.target.value);
+                    setInviteResult(null);
+                  }}
+                  onKeyDown={(e) => e.key === "Enter" && !inviting && inviteEmail && sendInvite()}
+                  disabled={inviting}
+                />
+                <Button
+                  onClick={sendInvite}
+                  disabled={inviting || !inviteEmail.trim()}
+                >
+                  {inviting ? "Sending…" : "Send Invite"}
+                </Button>
+              </div>
+              {inviteResult && (
+                <p className={`text-sm ${inviteResult.ok ? "text-green-600" : "text-destructive"}`}>
+                  {inviteResult.message}
+                </p>
               )}
             </CardContent>
           </Card>
