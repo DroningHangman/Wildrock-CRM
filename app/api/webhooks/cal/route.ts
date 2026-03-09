@@ -1,6 +1,15 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
+import { Ratelimit } from '@upstash/ratelimit'
+import { Redis } from '@upstash/redis'
+
+// Sliding window: 20 requests per minute per IP
+// Created at module level so it's reused across warm serverless invocations
+const ratelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(20, '1 m'),
+})
 
 // Verify Cal.com webhook signature using HMAC-SHA256
 // Cal.com signs the raw request body with the webhook secret and sends
@@ -33,6 +42,13 @@ async function verifyCalSignature(rawBody: string, signatureHeader: string | nul
 
 export async function POST(req: Request) {
   try {
+    // Rate limit by IP — 20 requests/minute per source
+    const ip = (req.headers.get('x-forwarded-for') ?? 'anonymous').split(',')[0].trim()
+    const { success } = await ratelimit.limit(ip)
+    if (!success) {
+      return NextResponse.json({ error: 'Too Many Requests' }, { status: 429 })
+    }
+
     // Read raw body first — we need it for signature verification before parsing JSON
     const rawBody = await req.text()
 
