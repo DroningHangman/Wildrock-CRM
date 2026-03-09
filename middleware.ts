@@ -56,17 +56,31 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Protect all routes except /login, public assets, and webhooks
-  const isAuthPage = request.nextUrl.pathname.startsWith('/login')
-  const isWebhook = request.nextUrl.pathname.startsWith('/api/webhooks')
-  const isPublicRoot = request.nextUrl.pathname === '/'
+  const path = request.nextUrl.pathname
+  const isAuthPage    = path.startsWith('/login')
+  const isWebhook     = path.startsWith('/api/webhooks')
+  const isPublicRoot  = path === '/'
+  const isAdminRoute  = path.startsWith('/admin') || path.startsWith('/api/admin')
 
+  // Unauthenticated users can only reach /login, webhooks, and /
   if (!user && !isAuthPage && !isWebhook && !isPublicRoot) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // If user is logged in and tries to access /login, redirect to /bookings
-  if (user && request.nextUrl.pathname.startsWith('/login')) {
+  // Admin routes require the admin role (set via app_metadata in Supabase)
+  if (user && isAdminRoute) {
+    const role = user.app_metadata?.role
+    if (role !== 'admin') {
+      // API routes get a 403; page routes redirect to /bookings
+      if (path.startsWith('/api/')) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+      return NextResponse.redirect(new URL('/bookings', request.url))
+    }
+  }
+
+  // Logged-in users hitting /login go straight to /bookings
+  if (user && isAuthPage) {
     return NextResponse.redirect(new URL('/bookings', request.url))
   }
 

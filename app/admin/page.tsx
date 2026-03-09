@@ -182,6 +182,13 @@ interface ImportResult {
   failed: FailedRow[];
 }
 
+interface AdminUser {
+  id: string;
+  email: string;
+  name: string;
+  isAdmin: boolean;
+}
+
 // ─── Main component ──────────────────────────────────────────────────────────
 
 export default function AdminPage() {
@@ -201,7 +208,47 @@ export default function AdminPage() {
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [showFailed, setShowFailed] = useState(false);
 
+  // Admin management state
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
+  const [loadingAdminUsers, setLoadingAdminUsers] = useState(false);
+  const [adminUsersError, setAdminUsersError] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function fetchAdminUsers() {
+    setLoadingAdminUsers(true);
+    setAdminUsersError(null);
+    try {
+      const res = await fetch("/api/admin/users");
+      if (!res.ok) throw new Error("Failed to load users");
+      const { users } = await res.json();
+      setAdminUsers(users);
+    } catch {
+      setAdminUsersError("Could not load users.");
+    } finally {
+      setLoadingAdminUsers(false);
+    }
+  }
+
+  async function toggleAdmin(userId: string, makeAdmin: boolean) {
+    setTogglingId(userId);
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, makeAdmin }),
+      });
+      if (!res.ok) throw new Error("Failed to update user");
+      setAdminUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, isAdmin: makeAdmin } : u))
+      );
+    } catch {
+      setAdminUsersError("Failed to update user role.");
+    } finally {
+      setTogglingId(null);
+    }
+  }
 
   async function fetchTags() {
     setLoadingTags(true);
@@ -212,6 +259,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     fetchTags();
+    fetchAdminUsers();
   }, []);
 
   const allTags = Array.from(
@@ -798,31 +846,88 @@ export default function AdminPage() {
           </Card>
         </div>
 
-        {/* ── Tags panel ── */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Tags in use</CardTitle>
-            <CardDescription>
-              Unique tags across all contacts (read-only).
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loadingTags ? (
-              <p className="text-muted-foreground text-sm">Loading…</p>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {allTags.map((t) => (
-                  <Badge key={t} variant="secondary">
-                    {t}
-                  </Badge>
-                ))}
-                {allTags.length === 0 && (
-                  <p className="text-muted-foreground text-sm">No tags yet.</p>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* ── Right column ── */}
+        <div className="space-y-6">
+          {/* Tags panel */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Tags in use</CardTitle>
+              <CardDescription>
+                Unique tags across all contacts (read-only).
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loadingTags ? (
+                <p className="text-muted-foreground text-sm">Loading…</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {allTags.map((t) => (
+                    <Badge key={t} variant="secondary">
+                      {t}
+                    </Badge>
+                  ))}
+                  {allTags.length === 0 && (
+                    <p className="text-muted-foreground text-sm">No tags yet.</p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Manage admins */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Manage Admins</CardTitle>
+              <CardDescription>
+                Grant or revoke admin access for any user.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {loadingAdminUsers && (
+                <p className="text-muted-foreground text-sm">Loading…</p>
+              )}
+              {adminUsersError && (
+                <p className="text-sm text-destructive">{adminUsersError}</p>
+              )}
+              {!loadingAdminUsers && adminUsers.map((u) => (
+                <div
+                  key={u.id}
+                  className="flex items-center justify-between gap-2"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {u.name || u.email}
+                    </p>
+                    {u.name && (
+                      <p className="text-xs text-muted-foreground truncate">
+                        {u.email}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {u.isAdmin && (
+                      <Badge variant="secondary" className="text-xs">
+                        admin
+                      </Badge>
+                    )}
+                    <Button
+                      size="sm"
+                      variant={u.isAdmin ? "outline" : "default"}
+                      disabled={togglingId === u.id}
+                      onClick={() => toggleAdmin(u.id, !u.isAdmin)}
+                    >
+                      {togglingId === u.id
+                        ? "…"
+                        : u.isAdmin
+                        ? "Revoke"
+                        : "Grant"}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
