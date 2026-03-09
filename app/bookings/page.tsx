@@ -195,7 +195,7 @@ export default function BookingsPage() {
       .select("*, contacts(*)")
       .order("date", { ascending: false });
     if (error) {
-      console.error("Error fetching bookings:", error);
+      console.error("Error fetching bookings:", error instanceof Error ? error.message : String(error));
       setBookings([]);
     } else {
       setBookings((data as BookingRow[]) ?? []);

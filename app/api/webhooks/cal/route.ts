@@ -81,6 +81,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No attendee found' }, { status: 400 })
     }
 
+    // Validate and sanitize attendee fields before any DB operations
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!attendee.email || !EMAIL_RE.test(String(attendee.email))) {
+      return NextResponse.json({ error: 'Invalid attendee email' }, { status: 400 })
+    }
+    const safeEmail = String(attendee.email).slice(0, 254)
+    const safeName  = (attendee.name ? String(attendee.name).slice(0, 255) : null)
+
     // Helper function to extract value from Cal.com response format
     // Cal.com sends: {"label":"field_name","value":"actual_value","isHidden":false}
     const extractValue = (field: unknown): string | null => {
@@ -128,20 +136,22 @@ export async function POST(req: Request) {
     // Derive contact type from the booked event type
     const contactTypeForEvent = eventType?.toLowerCase().includes('field-trip') ? 'Teacher' : 'Parent'
 
+    const safePhone = phoneNumber ? String(phoneNumber).slice(0, 30) : null
+
     // 1. Find or Create Contact
     let contactId = null
     const { data: existingContact } = await supabaseAdmin
       .from('contacts')
       .select('id, phone, marketing_consent, contact_types')
-      .eq('email', attendee.email)
+      .eq('email', safeEmail)
       .single()
 
     if (existingContact) {
       contactId = existingContact.id
       // Update phone and/or consent if we have new information
       const updates: { phone?: string; marketing_consent?: boolean; contact_types?: string[] } = {}
-      if (phoneNumber && !existingContact.phone) {
-        updates.phone = phoneNumber
+      if (safePhone && !existingContact.phone) {
+        updates.phone = safePhone
       }
       // Update consent if provided (consent=true takes precedence, but don't overwrite existing true with false)
       if (marketingConsent !== false) {
@@ -162,9 +172,9 @@ export async function POST(req: Request) {
       const { data: newContact, error: contactError } = await supabaseAdmin
         .from('contacts')
         .insert({
-          name: attendee.name,
-          email: attendee.email,
-          phone: phoneNumber,
+          name: safeName,
+          email: safeEmail,
+          phone: safePhone,
           marketing_consent: marketingConsent || false,
           contact_types: [contactTypeForEvent],
           notes: 'Added automatically via Cal.com'

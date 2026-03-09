@@ -140,7 +140,7 @@ export default function ContactsPage() {
         p_min_count: minCount,
       });
       if (error) {
-        console.error("Error fetching contacts by participation:", error);
+        console.error("Error fetching contacts by participation:", error instanceof Error ? error.message : String(error));
         setContacts([]);
       } else {
         setContacts((data as Contact[]) ?? []);
@@ -151,7 +151,7 @@ export default function ContactsPage() {
         .select("*")
         .order("name", { nullsFirst: false });
       if (error) {
-        console.error("Error fetching contacts:", error);
+        console.error("Error fetching contacts:", error instanceof Error ? error.message : String(error));
         setContacts([]);
       } else {
         setContacts((data as Contact[]) ?? []);
@@ -353,7 +353,7 @@ export default function ContactsPage() {
       .eq("id", editingContact.id);
     setSaving(false);
     if (error) {
-      console.error("Error updating contact:", error);
+      console.error("Error updating contact:", error instanceof Error ? error.message : String(error));
       alert("Failed to update contact");
       return;
     }

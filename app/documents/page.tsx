@@ -59,7 +59,7 @@ export default function DocumentsPage() {
       .order("uploaded_at", { ascending: false });
     setLoading(false);
     if (error) {
-      console.error("Error listing documents:", error);
+      console.error("Error listing documents:", error instanceof Error ? error.message : String(error));
       setDocs([]);
       return;
     }
@@ -84,7 +84,7 @@ export default function DocumentsPage() {
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || !selectedId) return;
-    if (!file.name.toLowerCase().endsWith(".pdf")) {
+    if (!file.name.toLowerCase().endsWith(".pdf") || file.type !== "application/pdf") {
       alert("Please upload a PDF file.");
       return;
     }
@@ -94,8 +94,8 @@ export default function DocumentsPage() {
       .from(BUCKET_DOCUMENTS)
       .upload(path, file, { upsert: true });
     if (uploadErr) {
-      console.error("Upload error:", uploadErr);
-      alert("Upload failed. Check console.");
+      console.error("Upload error:", uploadErr.message);
+      alert("Upload failed.");
       setUploading(false);
       e.target.value = "";
       return;
@@ -109,7 +109,7 @@ export default function DocumentsPage() {
     setUploading(false);
     e.target.value = "";
     if (insertErr) {
-      console.error("Error saving document record:", insertErr);
+      console.error("Error saving document record:", insertErr instanceof Error ? insertErr.message : String(insertErr));
       return;
     }
     fetchDocs();
@@ -123,7 +123,7 @@ export default function DocumentsPage() {
       .from(BUCKET_DOCUMENTS)
       .createSignedUrl(path, 60);
     if (error) {
-      console.error("View error:", error);
+      console.error("View error:", error instanceof Error ? error.message : String(error));
       setViewingDoc(null);
       return;
     }
@@ -139,7 +139,7 @@ export default function DocumentsPage() {
       .from(BUCKET_DOCUMENTS)
       .createSignedUrl(path, 60);
     if (error) {
-      console.error("Download error:", error);
+      console.error("Download error:", error instanceof Error ? error.message : String(error));
       return;
     }
     if (data?.signedUrl) {

@@ -115,7 +115,7 @@ export default function ReportsPage() {
       .select("*")
       .order("name");
     if (error) {
-      console.error("Error fetching program types:", error);
+      console.error("Error fetching program types:", error instanceof Error ? error.message : String(error));
     } else {
       const types = (data as ProgramType[]) ?? [];
       setProgramTypes(types);
@@ -148,7 +148,7 @@ export default function ReportsPage() {
 
       const { data, error } = await query;
       if (error) {
-        console.error("Error fetching bookings for report:", error);
+        console.error("Error fetching bookings for report:", error instanceof Error ? error.message : String(error));
         setEntries([]);
       } else {
         const transformed: ProgramEntry[] = ((data as Booking[]) || []).map(
@@ -196,7 +196,7 @@ export default function ReportsPage() {
 
       const { data, error } = await query;
       if (error) {
-        console.error("Error fetching entries:", error);
+        console.error("Error fetching entries:", error instanceof Error ? error.message : String(error));
         setEntries([]);
       } else {
         setEntries((data as ProgramEntry[]) ?? []);

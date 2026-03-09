@@ -91,7 +91,7 @@ export default function MembersPage() {
       .select("*, contacts(*)")
       .order("start_date", { ascending: false });
     if (error) {
-      console.error("Error fetching memberships:", error);
+      console.error("Error fetching memberships:", error instanceof Error ? error.message : String(error));
       setMemberships([]);
     } else {
       setMemberships((data as MembershipRow[]) ?? []);
@@ -132,7 +132,7 @@ export default function MembersPage() {
     });
     setSaving(false);
     if (error) {
-      console.error("Error adding membership:", error);
+      console.error("Error adding membership:", error instanceof Error ? error.message : String(error));
       alert("Failed to add membership");
       return;
     }
@@ -167,7 +167,7 @@ export default function MembersPage() {
       .eq("id", editingMembership.id);
     setSaving(false);
     if (error) {
-      console.error("Error updating membership:", error);
+      console.error("Error updating membership:", error instanceof Error ? error.message : String(error));
       alert("Failed to update membership");
       return;
     }
@@ -182,7 +182,7 @@ export default function MembersPage() {
     const { error } = await supabase.from("memberships").delete().eq("id", editingMembership.id);
     setSaving(false);
     if (error) {
-      console.error("Error deleting membership:", error);
+      console.error("Error deleting membership:", error instanceof Error ? error.message : String(error));
       alert("Failed to delete membership");
       return;
     }

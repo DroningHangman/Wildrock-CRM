@@ -82,7 +82,7 @@ export default function RelationshipsPage() {
       .select("*, contact_entity_roles(count)")
       .order("name");
     if (error) {
-      console.error("Error fetching entities:", error);
+      console.error("Error fetching entities:", error instanceof Error ? error.message : String(error));
       setEntities([]);
     } else {
       setEntities((data as Entity[]) ?? []);
@@ -102,7 +102,7 @@ export default function RelationshipsPage() {
       .eq("entity_id", entityId)
       .order("created_at");
     if (error) {
-      console.error("Error fetching members:", error);
+      console.error("Error fetching members:", error instanceof Error ? error.message : String(error));
       setEntityMembers([]);
     } else {
       setEntityMembers((data as ContactEntityRole[]) ?? []);
