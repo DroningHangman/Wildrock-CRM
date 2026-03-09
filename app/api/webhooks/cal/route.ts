@@ -1,15 +1,56 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import crypto from 'crypto'
+
+// Verify Cal.com webhook signature using HMAC-SHA256
+// Cal.com signs the raw request body with the webhook secret and sends
+// the hex digest in the X-Cal-Signature-256 header.
+async function verifyCalSignature(rawBody: string, signatureHeader: string | null): Promise<boolean> {
+  const secret = process.env.CAL_WEBHOOK_SECRET
+  if (!secret) {
+    console.error('CAL_WEBHOOK_SECRET is not set')
+    return false
+  }
+  if (!signatureHeader) return false
+
+  // Header format: "sha256=<hex_digest>"
+  const expected = signatureHeader.startsWith('sha256=')
+    ? signatureHeader.slice(7)
+    : signatureHeader
+
+  const hmac = crypto.createHmac('sha256', secret)
+  hmac.update(rawBody, 'utf8')
+  const digest = hmac.digest('hex')
+
+  // Timing-safe comparison to prevent timing attacks
+  try {
+    return crypto.timingSafeEqual(Buffer.from(digest, 'hex'), Buffer.from(expected, 'hex'))
+  } catch {
+    // Buffer lengths differ → signature is invalid
+    return false
+  }
+}
 
 export async function POST(req: Request) {
   try {
+    // Read raw body first — we need it for signature verification before parsing JSON
+    const rawBody = await req.text()
+
+    // Verify Cal.com webhook signature
+    const signature = req.headers.get('X-Cal-Signature-256')
+    const isValid = await verifyCalSignature(rawBody, signature)
+    if (!isValid) {
+      console.warn('Cal.com webhook: invalid or missing signature')
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     // Initialize Supabase with Service Role Key inside the handler
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    const payload = await req.json()
+    const payload = JSON.parse(rawBody)
 
     // triggerEvent is at the top level of the Cal.com payload
     const triggerEvent: string | undefined = payload.triggerEvent
@@ -206,8 +247,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    console.error('Webhook Error:', message)
-    return NextResponse.json({ error: message }, { status: 500 })
+    // Log internally but never expose internal error details to the caller
+    console.error('Webhook Error:', error instanceof Error ? error.message : error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
