@@ -193,10 +193,6 @@ interface AdminUser {
 // ─── Main component ──────────────────────────────────────────────────────────
 
 export default function AdminPage() {
-  // Tags panel state
-  const [contacts, setContacts] = useState<{ tags: string[] | null }[]>([]);
-  const [loadingTags, setLoadingTags] = useState(false);
-
   // Import state
   const [importType, setImportType] = useState<ImportType>("contacts");
   const [importStep, setImportStep] = useState<"upload" | "map" | "result">("upload");
@@ -280,21 +276,9 @@ export default function AdminPage() {
     }
   }
 
-  async function fetchTags() {
-    setLoadingTags(true);
-    const { data } = await supabase.from("contacts").select("tags");
-    setLoadingTags(false);
-    setContacts((data as { tags: string[] | null }[]) ?? []);
-  }
-
   useEffect(() => {
-    fetchTags();
     fetchAdminUsers();
   }, []);
-
-  const allTags = Array.from(
-    new Set(contacts.flatMap((c) => c.tags ?? []).filter(Boolean))
-  ).sort();
 
   // ── File handling ──────────────────────────────────────────────────────────
 
@@ -378,7 +362,6 @@ export default function AdminPage() {
     setImportResult({ created, updated, skipped, failed });
     setImporting(false);
     setImportStep("result");
-    fetchTags();
   }
 
   // ─── Import row functions ─────────────────────────────────────────────────
@@ -879,31 +862,6 @@ export default function AdminPage() {
         {/* ── Right column ── */}
         <div className="space-y-6">
           {/* Tags panel */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Tags in use</CardTitle>
-              <CardDescription>
-                Unique tags across all contacts (read-only).
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loadingTags ? (
-                <p className="text-muted-foreground text-sm">Loading…</p>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {allTags.map((t) => (
-                    <Badge key={t} variant="secondary">
-                      {t}
-                    </Badge>
-                  ))}
-                  {allTags.length === 0 && (
-                    <p className="text-muted-foreground text-sm">No tags yet.</p>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
           {/* Invite user */}
           <Card>
             <CardHeader>
