@@ -582,8 +582,7 @@ export default function ContactsPage() {
                       <TableHead>Email</TableHead>
                       <TableHead>Phone</TableHead>
                       <TableHead>Types</TableHead>
-                      <TableHead>Organization</TableHead>
-                      <TableHead>Tags</TableHead>
+                      <TableHead>Added</TableHead>
                       <TableHead>Marketing Consent</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -604,13 +603,8 @@ export default function ContactsPage() {
                             ))}
                           </div>
                         </TableCell>
-                        <TableCell>{c.organization ?? "—"}</TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {(c.tags ?? []).map((t) => (
-                              <Badge key={t} variant="outline">{t}</Badge>
-                            ))}
-                          </div>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {c.created_at ? new Date(c.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "—"}
                         </TableCell>
                         <TableCell>
                           {c.marketing_consent === true ? (
@@ -653,19 +647,19 @@ export default function ContactsPage() {
                     {c.phone && (
                       <p className="text-sm text-muted-foreground">{c.phone}</p>
                     )}
-                    {((c.contact_types ?? []).length > 0 || (c.tags ?? []).length > 0) && (
+                    {(c.contact_types ?? []).length > 0 && (
                       <div className="flex flex-wrap gap-1 pt-1">
                         {(c.contact_types ?? []).map((t) => (
                           <Badge key={t} variant="secondary" className="text-[10px]">
                             {t}
                           </Badge>
                         ))}
-                        {(c.tags ?? []).map((t) => (
-                          <Badge key={t} variant="outline" className="text-[10px]">
-                            {t}
-                          </Badge>
-                        ))}
                       </div>
+                    )}
+                    {c.created_at && (
+                      <p className="text-xs text-muted-foreground">
+                        Added {new Date(c.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                      </p>
                     )}
                   </div>
                 ))}
