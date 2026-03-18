@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { ChevronDown } from "lucide-react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { supabase } from "@/lib/supabase";
@@ -210,6 +211,7 @@ export default function AdminPage() {
   const [loadingAdminUsers, setLoadingAdminUsers] = useState(false);
   const [adminUsersError, setAdminUsersError] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [adminsOpen, setAdminsOpen] = useState(false);
 
   // Invite user state
   const [inviteEmail, setInviteEmail] = useState("");
@@ -900,13 +902,21 @@ export default function AdminPage() {
 
           {/* Manage admins */}
           <Card>
-            <CardHeader>
-              <CardTitle>Manage Admins</CardTitle>
-              <CardDescription>
-                Grant or revoke admin access for any user.
-              </CardDescription>
+            <CardHeader
+              className="cursor-pointer select-none flex flex-row items-center justify-between"
+              onClick={() => setAdminsOpen((o) => !o)}
+            >
+              <div>
+                <CardTitle>Manage Admins</CardTitle>
+                <CardDescription>
+                  Grant or revoke admin access for any user.
+                </CardDescription>
+              </div>
+              <ChevronDown
+                className={`h-4 w-4 text-muted-foreground transition-transform ${adminsOpen ? "rotate-180" : ""}`}
+              />
             </CardHeader>
-            <CardContent className="space-y-3">
+            {adminsOpen && <CardContent className="space-y-3">
               {loadingAdminUsers && (
                 <p className="text-muted-foreground text-sm">Loading…</p>
               )}
@@ -949,7 +959,7 @@ export default function AdminPage() {
                   </div>
                 </div>
               ))}
-            </CardContent>
+            </CardContent>}
           </Card>
         </div>
       </div>
