@@ -117,3 +117,29 @@ export interface ContactEntityRole {
   contacts?: { id: string; name: string | null; email: string | null } | null;
   entities?: { id: string; name: string | null; entity_type: string } | null;
 }
+
+export interface EmailTemplate {
+  id: string;
+  name: string;
+  subject: string;
+  body_html: string;
+  body_text: string | null;
+  variables: string[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface EmailSend {
+  id: string;
+  contact_id: string | null;
+  campaign_id: string | null;
+  template_id: string | null;
+  to_email: string;
+  subject: string;
+  status: string;
+  resend_message_id: string | null;
+  error_message: string | null;
+  sent_at: string | null;
+  created_at?: string;
+  email_templates?: { name: string } | null;
+}

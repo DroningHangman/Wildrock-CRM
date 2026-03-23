@@ -15,6 +15,7 @@ const links = [
   { href: "/bookings", label: "Bookings" },
   { href: "/members", label: "Members" },
   { href: "/documents", label: "Documents" },
+  { href: "/emails", label: "Emails" },
   { href: "/admin", label: "Admin" },
 ];
 

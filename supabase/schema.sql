@@ -119,7 +119,151 @@ create table program_entries (
   created_at timestamp default now()
 );
 
+-- ============================================================
+-- Row-Level Security (RLS)
+-- All tables are restricted to authenticated users only.
+-- Every authenticated user is treated as a trusted admin;
+-- add a roles/claims check here if you need multi-tenant isolation.
+-- ============================================================
+
+-- contacts
+alter table contacts enable row level security;
+create policy "Authenticated users can read contacts"
+  on contacts for select to authenticated using (true);
+create policy "Authenticated users can insert contacts"
+  on contacts for insert to authenticated with check (true);
+create policy "Authenticated users can update contacts"
+  on contacts for update to authenticated using (true) with check (true);
+create policy "Authenticated users can delete contacts"
+  on contacts for delete to authenticated using (true);
+
+-- bookings
+alter table bookings enable row level security;
+create policy "Authenticated users can read bookings"
+  on bookings for select to authenticated using (true);
+create policy "Authenticated users can insert bookings"
+  on bookings for insert to authenticated with check (true);
+create policy "Authenticated users can update bookings"
+  on bookings for update to authenticated using (true) with check (true);
+create policy "Authenticated users can delete bookings"
+  on bookings for delete to authenticated using (true);
+
+-- documents
+alter table documents enable row level security;
+create policy "Authenticated users can read documents"
+  on documents for select to authenticated using (true);
+create policy "Authenticated users can insert documents"
+  on documents for insert to authenticated with check (true);
+create policy "Authenticated users can update documents"
+  on documents for update to authenticated using (true) with check (true);
+create policy "Authenticated users can delete documents"
+  on documents for delete to authenticated using (true);
+
+-- memberships
+alter table memberships enable row level security;
+create policy "Authenticated users can read memberships"
+  on memberships for select to authenticated using (true);
+create policy "Authenticated users can insert memberships"
+  on memberships for insert to authenticated with check (true);
+create policy "Authenticated users can update memberships"
+  on memberships for update to authenticated using (true) with check (true);
+create policy "Authenticated users can delete memberships"
+  on memberships for delete to authenticated using (true);
+
+-- entities
+alter table entities enable row level security;
+create policy "Authenticated users can read entities"
+  on entities for select to authenticated using (true);
+create policy "Authenticated users can insert entities"
+  on entities for insert to authenticated with check (true);
+create policy "Authenticated users can update entities"
+  on entities for update to authenticated using (true) with check (true);
+create policy "Authenticated users can delete entities"
+  on entities for delete to authenticated using (true);
+
+-- relationship_types
+alter table relationship_types enable row level security;
+create policy "Authenticated users can read relationship_types"
+  on relationship_types for select to authenticated using (true);
+create policy "Authenticated users can insert relationship_types"
+  on relationship_types for insert to authenticated with check (true);
+create policy "Authenticated users can update relationship_types"
+  on relationship_types for update to authenticated using (true) with check (true);
+create policy "Authenticated users can delete relationship_types"
+  on relationship_types for delete to authenticated using (true);
+
+-- contact_entity_roles
+alter table contact_entity_roles enable row level security;
+create policy "Authenticated users can read contact_entity_roles"
+  on contact_entity_roles for select to authenticated using (true);
+create policy "Authenticated users can insert contact_entity_roles"
+  on contact_entity_roles for insert to authenticated with check (true);
+create policy "Authenticated users can update contact_entity_roles"
+  on contact_entity_roles for update to authenticated using (true) with check (true);
+create policy "Authenticated users can delete contact_entity_roles"
+  on contact_entity_roles for delete to authenticated using (true);
+
+-- program_types
+alter table program_types enable row level security;
+create policy "Authenticated users can read program_types"
+  on program_types for select to authenticated using (true);
+create policy "Authenticated users can insert program_types"
+  on program_types for insert to authenticated with check (true);
+create policy "Authenticated users can update program_types"
+  on program_types for update to authenticated using (true) with check (true);
+create policy "Authenticated users can delete program_types"
+  on program_types for delete to authenticated using (true);
+
+-- program_entries
+alter table program_entries enable row level security;
+create policy "Authenticated users can read program_entries"
+  on program_entries for select to authenticated using (true);
+create policy "Authenticated users can insert program_entries"
+  on program_entries for insert to authenticated with check (true);
+create policy "Authenticated users can update program_entries"
+  on program_entries for update to authenticated using (true) with check (true);
+create policy "Authenticated users can delete program_entries"
+  on program_entries for delete to authenticated using (true);
+
+-- ============================================================
 -- seed program types
+-- Email tables
+create table email_templates (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  subject text not null,
+  body_html text not null,
+  body_text text,
+  variables text[] default '{}',
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create table email_sends (
+  id uuid primary key default gen_random_uuid(),
+  contact_id uuid references contacts(id) on delete set null,
+  campaign_id uuid,  -- reserved for Phase 2 campaigns
+  template_id uuid references email_templates(id) on delete set null,
+  to_email text not null,
+  subject text not null,
+  status text not null default 'queued',
+  resend_message_id text,
+  error_message text,
+  sent_at timestamptz,
+  created_at timestamptz default now()
+);
+
+alter table email_templates enable row level security;
+create policy "Authenticated users can read email_templates" on email_templates for select to authenticated using (true);
+create policy "Authenticated users can insert email_templates" on email_templates for insert to authenticated with check (true);
+create policy "Authenticated users can update email_templates" on email_templates for update to authenticated using (true) with check (true);
+create policy "Authenticated users can delete email_templates" on email_templates for delete to authenticated using (true);
+
+alter table email_sends enable row level security;
+create policy "Authenticated users can read email_sends" on email_sends for select to authenticated using (true);
+create policy "Authenticated users can insert email_sends" on email_sends for insert to authenticated with check (true);
+create policy "Authenticated users can update email_sends" on email_sends for update to authenticated using (true) with check (true);
+
 insert into program_types (name, slug, description, field_schema) values
 (
   'Playscape', 'playscape', 'Daily playscape attendance log',

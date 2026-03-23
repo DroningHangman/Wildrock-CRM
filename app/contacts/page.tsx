@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { supabase, BUCKET_DOCUMENTS } from "@/lib/supabase";
-import type { Contact, Booking, Membership, Document, ContactEntityRole, Entity, RelationshipType } from "@/types";
+import type { Contact, Booking, Membership, Document, ContactEntityRole, Entity, RelationshipType, EmailTemplate, EmailSend } from "@/types";
 import Papa from "papaparse";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,7 +41,7 @@ const CaptureWaiverModal = dynamic(
   { ssr: false }
 );
 
-type ViewTab = "profile" | "bookings" | "memberships" | "documents" | "relationships";
+type ViewTab = "profile" | "bookings" | "memberships" | "documents" | "relationships" | "emails";
 
 export default function ContactsPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -62,6 +62,11 @@ export default function ContactsPage() {
   const [contactDocuments, setContactDocuments] = useState<Document[]>([]);
   const [contactEntityRoles, setContactEntityRoles] = useState<ContactEntityRole[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
+  const [contactEmailSends, setContactEmailSends] = useState<EmailSend[]>([]);
+  const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailSendResult, setEmailSendResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   // Add relationship state
   const [allEntities, setAllEntities] = useState<Entity[]>([]);
@@ -167,18 +172,20 @@ export default function ContactsPage() {
 
   const fetchRelatedData = useCallback(async (contactId: string) => {
     setLoadingRelated(true);
-    
-    const [bookingsRes, membershipsRes, docsRes, rolesRes] = await Promise.all([
+
+    const [bookingsRes, membershipsRes, docsRes, rolesRes, emailSendsRes] = await Promise.all([
       supabase.from("bookings").select("*").eq("contact_id", contactId).order("date", { ascending: false }),
       supabase.from("memberships").select("*").eq("contact_id", contactId).order("start_date", { ascending: false }),
       supabase.from("documents").select("*").eq("contact_id", contactId).order("uploaded_at", { ascending: false }),
-      supabase.from("contact_entity_roles").select("*, entities(id, name, entity_type)").eq("contact_id", contactId).order("created_at")
+      supabase.from("contact_entity_roles").select("*, entities(id, name, entity_type)").eq("contact_id", contactId).order("created_at"),
+      supabase.from("email_sends").select("*, email_templates(name)").eq("contact_id", contactId).order("created_at", { ascending: false }),
     ]);
 
     setContactBookings(bookingsRes.data ?? []);
     setContactMemberships(membershipsRes.data ?? []);
     setContactDocuments(docsRes.data ?? []);
     setContactEntityRoles((rolesRes.data as ContactEntityRole[]) ?? []);
+    setContactEmailSends((emailSendsRes.data as EmailSend[]) ?? []);
     setLoadingRelated(false);
   }, []);
 
@@ -190,6 +197,12 @@ export default function ContactsPage() {
   useEffect(() => {
     fetchAllEntities();
   }, [fetchAllEntities]);
+
+  useEffect(() => {
+    fetch("/api/email/templates")
+      .then((r) => r.ok ? r.json() : [])
+      .then((data) => setEmailTemplates(data as EmailTemplate[]));
+  }, []);
 
   useEffect(() => {
     if (entityTypeFilter === "all") {
@@ -782,6 +795,7 @@ export default function ContactsPage() {
               <Button variant={activeTab === "memberships" ? "default" : "ghost"} size="sm" className="shrink-0" onClick={() => setActiveTab("memberships")}>Memberships</Button>
               <Button variant={activeTab === "documents" ? "default" : "ghost"} size="sm" className="shrink-0" onClick={() => setActiveTab("documents")}>Documents</Button>
               <Button variant={activeTab === "relationships" ? "default" : "ghost"} size="sm" className="shrink-0" onClick={() => setActiveTab("relationships")}>Relationships</Button>
+              <Button variant={activeTab === "emails" ? "default" : "ghost"} size="sm" className="shrink-0" onClick={() => { setActiveTab("emails"); setEmailSendResult(null); }}>Emails</Button>
             </div>
           </div>
 
@@ -1087,6 +1101,110 @@ export default function ContactsPage() {
 
                     <Button onClick={addRelationship} disabled={saving || !addRelEntityId} size="sm">Add</Button>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "emails" && (
+              <div className="space-y-6">
+                {/* Send Email panel */}
+                <div className="rounded-lg border p-4 space-y-3">
+                  <p className="text-sm font-semibold">Send Email</p>
+                  {!editingContact?.email && (
+                    <p className="text-sm text-destructive">This contact has no email address.</p>
+                  )}
+                  {editingContact?.email && (
+                    <>
+                      <div className="flex flex-wrap gap-3 items-end">
+                        <div className="flex-1 min-w-[200px]">
+                          <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a template…" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {emailTemplates.length === 0 ? (
+                                <SelectItem value="__none__" disabled>No templates available</SelectItem>
+                              ) : (
+                                emailTemplates.map((t) => (
+                                  <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                                ))
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <Button
+                          size="sm"
+                          disabled={sendingEmail || !selectedTemplateId}
+                          onClick={async () => {
+                            if (!editingContact || !selectedTemplateId) return;
+                            setSendingEmail(true);
+                            setEmailSendResult(null);
+                            try {
+                              const res = await fetch("/api/email/send", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ contactId: editingContact.id, templateId: selectedTemplateId }),
+                              });
+                              const data = await res.json();
+                              if (res.ok && data.success) {
+                                setEmailSendResult({ ok: true, message: "Email sent successfully." });
+                                fetchRelatedData(editingContact.id);
+                              } else {
+                                setEmailSendResult({ ok: false, message: data.error ?? "Failed to send email." });
+                              }
+                            } catch {
+                              setEmailSendResult({ ok: false, message: "Network error." });
+                            }
+                            setSendingEmail(false);
+                          }}
+                        >
+                          {sendingEmail ? "Sending…" : "Send"}
+                        </Button>
+                      </div>
+                      {emailSendResult && (
+                        <p className={`text-sm ${emailSendResult.ok ? "text-green-600" : "text-destructive"}`}>
+                          {emailSendResult.message}
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* Email history */}
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold">Email History</p>
+                  {loadingRelated ? (
+                    <p className="text-sm text-muted-foreground">Loading...</p>
+                  ) : contactEmailSends.length === 0 ? (
+                    <p className="text-sm text-muted-foreground italic">No emails sent yet.</p>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Template</TableHead>
+                          <TableHead>Subject</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Sent</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {contactEmailSends.map((s) => (
+                          <TableRow key={s.id}>
+                            <TableCell className="font-medium">{s.email_templates?.name ?? "—"}</TableCell>
+                            <TableCell className="text-muted-foreground max-w-[200px] truncate">{s.subject}</TableCell>
+                            <TableCell>
+                              <Badge variant={s.status === "sent" ? "default" : s.status === "failed" ? "destructive" : "secondary"}>
+                                {s.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {s.sent_at ? new Date(s.sent_at).toLocaleString() : s.created_at ? new Date(s.created_at).toLocaleString() : "—"}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
                 </div>
               </div>
             )}
