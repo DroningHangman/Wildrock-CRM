@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 import { hydrateContact } from '@/lib/email/hydrateContact'
 import { resolveTemplate } from '@/lib/email/resolveTemplate'
+import { render } from '@react-email/components'
 import { GenericTemplate } from '@/emails/GenericTemplate'
 import type { Contact, Membership, Booking } from '@/types'
 
@@ -58,11 +59,12 @@ export async function POST(req: NextRequest) {
   let sentAt: string | null = null
 
   try {
+    const html = await render(GenericTemplate({ subject: resolved.subject, bodyHtml: resolved.body_html }))
     const result = await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL!,
       to: contact.email,
       subject: resolved.subject,
-      react: GenericTemplate({ subject: resolved.subject, bodyHtml: resolved.body_html }),
+      html,
     })
 
     if (result.error) {
