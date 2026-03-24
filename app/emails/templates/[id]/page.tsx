@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,12 @@ const AVAILABLE_VARS = [
   "last_booking_program", "last_booking_date", "today", "org_name",
 ];
 
+interface ContactResult {
+  id: string;
+  name: string | null;
+  email: string | null;
+}
+
 export default function EditTemplatePage() {
   const router = useRouter();
   const params = useParams();
@@ -27,6 +33,17 @@ export default function EditTemplatePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Preview state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<ContactResult[]>([]);
+  const [selectedContact, setSelectedContact] = useState<ContactResult | null>(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     fetch(`/api/email/templates/${id}`)
       .then((r) => r.json())
@@ -37,6 +54,33 @@ export default function EditTemplatePage() {
         setLoading(false);
       });
   }, [id]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (!searchQuery.trim() || selectedContact) {
+      setSearchResults([]);
+      setShowDropdown(false);
+      return;
+    }
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      const res = await fetch(`/api/contacts/search?q=${encodeURIComponent(searchQuery)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSearchResults(data);
+        setShowDropdown(data.length > 0);
+      }
+    }, 300);
+  }, [searchQuery, selectedContact]);
 
   const extractVariables = (text: string): string[] => {
     const matches = Array.from(text.matchAll(/\{\{(\w+)\}\}/g));
@@ -75,6 +119,32 @@ export default function EditTemplatePage() {
     const token = `{{${v}}}`;
     if (field === "subject") setSubject((s) => s + token);
     else setBodyHtml((s) => s + token);
+  };
+
+  const handlePreview = async (withContact: boolean) => {
+    if (!subject || !bodyHtml) {
+      setPreviewError("Subject and body are required to preview.");
+      return;
+    }
+    setPreviewing(true);
+    setPreviewError(null);
+    const res = await fetch("/api/email/preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        subject,
+        body_html: bodyHtml,
+        contact_id: withContact && selectedContact ? selectedContact.id : undefined,
+      }),
+    });
+    setPreviewing(false);
+    if (!res.ok) {
+      const data = await res.json();
+      setPreviewError(data.error ?? "Preview failed.");
+      return;
+    }
+    const data = await res.json();
+    setPreviewHtml(data.html);
   };
 
   if (loading) return <div className="container mx-auto px-4 py-8">Loading...</div>;
@@ -124,6 +194,86 @@ export default function EditTemplatePage() {
             <Button asChild variant="outline">
               <Link href="/emails/templates">Cancel</Link>
             </Button>
+          </div>
+
+          {/* Preview section */}
+          <div className="border rounded-lg p-4 space-y-3">
+            <p className="text-sm font-semibold">Preview</p>
+
+            <div className="relative" ref={searchRef}>
+              <Input
+                placeholder="Search contact by name or email…"
+                value={selectedContact ? (selectedContact.name ?? selectedContact.email ?? "") : searchQuery}
+                onChange={(e) => {
+                  setSelectedContact(null);
+                  setSearchQuery(e.target.value);
+                }}
+                onFocus={() => {
+                  if (searchResults.length > 0) setShowDropdown(true);
+                }}
+              />
+              {selectedContact && (
+                <button
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs px-1"
+                  onClick={() => { setSelectedContact(null); setSearchQuery(""); }}
+                >
+                  ✕
+                </button>
+              )}
+              {showDropdown && (
+                <div className="absolute z-10 w-full mt-1 bg-background border rounded-md shadow-md max-h-48 overflow-y-auto">
+                  {searchResults.map((c) => (
+                    <button
+                      key={c.id}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted"
+                      onClick={() => {
+                        setSelectedContact(c);
+                        setSearchQuery("");
+                        setShowDropdown(false);
+                      }}
+                    >
+                      <span className="font-medium">{c.name ?? "—"}</span>
+                      <span className="text-muted-foreground ml-2">{c.email}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {selectedContact && (
+              <p className="text-xs text-muted-foreground">
+                Selected: <span className="font-medium text-foreground">{selectedContact.name ?? selectedContact.email}</span>
+              </p>
+            )}
+
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={() => handlePreview(true)}
+                disabled={previewing || !selectedContact}
+              >
+                {previewing ? "Loading…" : "Preview"}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handlePreview(false)}
+                disabled={previewing}
+              >
+                Preview without contact
+              </Button>
+            </div>
+
+            {previewError && <p className="text-sm text-destructive">{previewError}</p>}
+
+            {previewHtml && (
+              <iframe
+                srcDoc={previewHtml}
+                className="w-full border rounded-md"
+                style={{ height: "600px" }}
+                title="Email preview"
+              />
+            )}
           </div>
         </div>
 
