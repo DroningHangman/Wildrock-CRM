@@ -82,13 +82,14 @@ export default function NewTemplatePage() {
           </div>
 
           <div className="space-y-2">
-            <Label>Body (HTML supported)</Label>
+            <Label>Body</Label>
             <Textarea
-              placeholder={`<p>Hi {{first_name}},</p>\n<p>Thanks for being part of the Wildrock community!</p>`}
+              placeholder={`Hi {{first_name}},\n\nThank you for visiting Wildrock!\n\nBest,\nThe Wildrock Team`}
               value={bodyHtml}
               onChange={(e) => setBodyHtml(e.target.value)}
               className="min-h-[300px] font-mono text-sm"
             />
+            <p className="text-xs text-muted-foreground">Write in plain text — blank lines become paragraph breaks. HTML is also accepted.</p>
           </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}
